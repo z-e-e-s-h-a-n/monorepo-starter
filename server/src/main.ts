@@ -1,8 +1,41 @@
 import { NestFactory } from "@nestjs/core";
-import { AppModule } from "./app.module";
+import { AppModule } from "@/app.module";
+import cookieParser from "cookie-parser";
+import { GlobalValidationPipe } from "@/pipes/validation.pipe";
+import { AllExceptionsFilter } from "@/filters/exceptions.filter";
+import { ResponseInterceptor } from "@/interceptors/response.interceptor";
+import { EnvService } from "@/modules/env/env.service";
+import { LoggerService } from "./modules/logger/logger.service";
+import { WinstonModule } from "nest-winston";
+import { winstonConfig } from "./modules/logger/winston.config";
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  await app.listen(process.env.PORT ?? 4000);
+  const app = await NestFactory.create(AppModule, {
+    logger: WinstonModule.createLogger(winstonConfig),
+  });
+  const env = app.get(EnvService);
+  const logger = await app.resolve(LoggerService);
+
+  const start = Date.now();
+  const port = env.get("APP_PORT");
+  const endpoint = env.get("APP_ENDPOINT");
+  const nodeEnv = env.get("NODE_ENV");
+
+  app.use(cookieParser());
+  app.useGlobalInterceptors(app.get(ResponseInterceptor));
+  app.useGlobalFilters(app.get(AllExceptionsFilter));
+  app.useGlobalPipes(GlobalValidationPipe);
+  await app.listen(port);
+
+  logger.log("==========================================");
+  logger.log(`🚀 Server started successfully!`);
+  logger.log(`🌐 Endpoint: ${endpoint}`);
+  logger.log(`🔒 Environment: ${nodeEnv}`);
+  logger.log(`📦 Listening on port: ${port}`);
+  logger.log(`⏱️ Startup time: ${Date.now() - start}ms`);
+  logger.log(
+    `🪵 Logger initialized with Winston (see logs directory if enabled)`
+  );
+  logger.log("==========================================");
 }
 bootstrap();
