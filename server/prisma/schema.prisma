@@ -1,0 +1,198 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DB_URI")
+}
+
+//
+// ENUMS
+//
+
+enum UserRole {
+  admin
+  customer
+}
+
+// TODO Remove Duplicate Purposes Req 
+enum OtpPurpose {
+  setPassword
+  resetPassword
+  verifyIdentifier
+  changeIdentifierReq
+  changeIdentifier
+  enableMfaReq
+  enableMfa
+  disableMfaReq
+  disableMfa
+  verifyMfa
+}
+
+enum OtpType {
+  otp
+  token
+}
+
+enum MfaMethod {
+  email
+  sms
+  whatsapp
+  authApp
+}
+
+enum NotificationType {
+  email
+  sms
+  whatsapp
+  inApp
+}
+
+enum NotificationStatus {
+  pending
+  sent
+  failed
+  read
+}
+
+//
+// AUTH MODELS
+//
+
+model User {
+  id          String  @id @default(ulid())
+  username    String? @unique
+  password    String?
+  firstName   String
+  lastName    String?
+  displayName String
+  imageUrl    String?
+
+  // Contact
+  email           String? @unique
+  phone           String? @unique
+  isEmailVerified Boolean @default(false)
+  isPhoneVerified Boolean @default(false)
+
+  // Status
+  lastLoginAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  // Relations
+  refreshTokens   RefreshToken[]
+  otps            Otp[]
+  roles           RoleAssignment[]
+  securitySetting SecuritySetting?
+
+  notifications Notification[]
+  backupCodes   BackupCode[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([username])
+  @@index([email, isEmailVerified])
+  @@index([phone, isPhoneVerified])
+}
+
+model RoleAssignment {
+  id     String   @id @default(ulid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   UserRole
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  revokedAt DateTime?
+
+  @@unique([userId, role])
+}
+
+model SecuritySetting {
+  id     String @id @default(ulid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  preferredMfa  MfaMethod?
+  recoveryEmail String?
+  recoveryPhone String?
+  isMfaEnabled  Boolean    @default(false)
+  loginAlerts   Boolean    @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isMfaEnabled])
+}
+
+model BackupCode {
+  id        String    @id @default(ulid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String    @unique
+  isUsed    Boolean   @default(false)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+
+  @@index([userId, isUsed])
+}
+
+model RefreshToken {
+  id          String   @id @default(ulid())
+  token       String   @unique
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ip          String
+  userAgent   String
+  lastUsed    DateTime @default(now())
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+  isActive    Boolean  @default(true)
+  blacklisted Boolean  @default(false)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([userId, expiresAt])
+}
+
+model Otp {
+  id        String     @id @default(ulid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   OtpPurpose
+  type      OtpType    @default(otp)
+  secret    String
+  expiresAt DateTime
+  isUsed    Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
+}
+
+model Notification {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String?
+  message   String?
+  purpose   String
+  metadata  Json?
+  status    NotificationStatus @default(pending)
+  sentAt    DateTime?
+  readAt    DateTime?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([userId, readAt])
+}

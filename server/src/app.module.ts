@@ -6,12 +6,14 @@ import { PublicModule } from "@/modules/public/public.module";
 import { LoggerModule } from "@/modules/logger/logger.module";
 import { AllExceptionsFilter } from "@/common/filters/exceptions.filter";
 import { ResponseInterceptor } from "@/common/interceptors/response.interceptor";
+import { PrismaModule } from "./modules/prisma/prisma.module";
 
 @Module({
   imports: [
     PublicModule,
     LoggerModule,
     EnvModule,
+    PrismaModule,
     ConfigModule.forRoot({
       isGlobal: true,
       validate: validateEnv,
