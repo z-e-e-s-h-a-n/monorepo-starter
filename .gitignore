@@ -30,10 +30,14 @@ dist
 
 # Debug
 npm-debug.log*
+logs
 
 # Misc
 .DS_Store
 *.pem
+
+# Prisma
+/generated/prisma
 
 # others
 .history
