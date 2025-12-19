@@ -13,7 +13,7 @@
       "@interceptors/*": ["src/lib/interceptors/*"],
       "@pipes/*": ["src/lib/pipes/*"],
       "@schemas/*": ["src/lib/schemas/*"],
-      "@templates/*": ["templates/*"],
+      "@templates/*": ["src/lib/templates/*"],
       "@utils/*": ["src/lib/utils/*"],
       "@generated/prisma": ["./prisma/generated/client"]
     }
