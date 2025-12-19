@@ -107,6 +107,11 @@ const main = async () => {
     execSync(`git remote add origin ${gitRemote}`, { stdio: "ignore" });
   }
 
+  // installing deps
+  console.log(cyan("📦 Installing server dependencies..."));
+  process.chdir(projectPath);
+  execSync("pnpm install", { stdio: "inherit" });
+
   // Run Prisma commands
   console.log(cyan("🧬 Running Prisma setup..."));
   process.chdir(serverDir);
