@@ -10,13 +10,22 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function main() {
-  const targetDir = process.argv[2];
+  let targetDir = process.argv[2];
 
   if (!targetDir) {
-    console.log(red("❌ Please provide a project name"));
-    console.log("Example:");
-    console.log("  pnpm create zhx-monorepo my-app");
-    process.exit(1);
+    const response = await prompts({
+      type: "text",
+      name: "targetDir",
+      message: "Project name:",
+      validate: (value) => (value ? true : "Project name cannot be empty"),
+    });
+    targetDir = response.targetDir;
+
+    if (!targetDir) {
+      console.log(red("❌ No project name provided."));
+      console.log(red("Exiting..."));
+      process.exit(1);
+    }
   }
 
   const projectPath = path.resolve(process.cwd(), targetDir);
