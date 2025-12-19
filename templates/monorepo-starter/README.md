@@ -1,4 +1,4 @@
-# Monopero Starter Template
+# Monorepo Starter Template
 
 This is a minimal, modern monorepo template based on shadcn/ui, customized for fast development and scalability.
 
@@ -39,4 +39,4 @@ Feel free to modify, extend, and organize the template to fit your workflow.
 
 ---
 
-Made with ❤️ using shadcn/ui & Monopero
+Made with ❤️ using shadcn/ui & Monorepo

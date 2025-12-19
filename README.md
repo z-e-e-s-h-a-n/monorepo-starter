@@ -1,6 +1,6 @@
-# create-zhx-monopero
+# create-zhx-monorepo
 
-A CLI package to quickly generate a **Monopero Starter** monorepo for full-stack development with Next.js, NestJS, and shadcn/ui.
+A CLI package to quickly generate a **Monorepo Starter** monorepo for full-stack development with Next.js, NestJS, and shadcn/ui.
 
 ---
 
@@ -8,10 +8,10 @@ A CLI package to quickly generate a **Monopero Starter** monorepo for full-stack
 
 ```bash
 # Install globally (optional)
-pnpm add -g create-zhx-monopero
+pnpm add -g create-zhx-monorepo
 
 # Create a new project
-pnpm create-zhx-monopero my-new-project
+pnpm create-zhx-monorepo my-new-project
 ```
 
 This will generate a ready-to-use monorepo under `my-new-project` with:

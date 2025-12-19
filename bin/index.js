@@ -15,7 +15,7 @@ async function main() {
   if (!targetDir) {
     console.log(red("❌ Please provide a project name"));
     console.log("Example:");
-    console.log("  pnpm create zhx-monopero my-app");
+    console.log("  pnpm create zhx-monorepo my-app");
     process.exit(1);
   }
 
