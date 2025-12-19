@@ -25,8 +25,6 @@ pnpm install
 pnpm dev # Start all apps
 ```
 
-````
-
 ## Database Setup
 
 1. Edit the `.env` file in the `server` directory:
@@ -67,4 +65,3 @@ Feel free to modify, extend, and organize the template to fit your workflow.
 ---
 
 Made with ❤️ using shadcn/ui & Monorepo
-````
