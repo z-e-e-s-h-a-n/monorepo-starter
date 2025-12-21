@@ -1,11 +1,16 @@
 import { Injectable } from "@nestjs/common";
-import { Resend } from "resend";
+import {
+  NotificationStatus,
+  NotificationType,
+  Prisma,
+} from "@generated/prisma";
 import { EnvService } from "@modules/env/env.service";
-import { NotificationStatus, NotificationType, Prisma } from "@generated/prisma";
 import { PrismaService } from "@modules/prisma/prisma.service";
 import { TemplateService } from "@modules/template/template.service";
 import { LoggerService } from "@modules/logger/logger.service";
+import { NodemailerService } from "./nodemailer.service";
 import { InjectLogger } from "@decorators/logger.decorator";
+import { appName } from "@constants/app";
 
 interface SendNotificationProps {
   userId: string;
@@ -18,15 +23,13 @@ interface SendNotificationProps {
 export class NotificationService {
   @InjectLogger()
   private readonly logger!: LoggerService;
-  private readonly resend: Resend;
 
   constructor(
-    private readonly env: EnvService,
     private readonly prisma: PrismaService,
-    private readonly templateService: TemplateService
-  ) {
-    this.resend = new Resend(this.env.get("RESEND_API_KEY"));
-  }
+    private readonly env: EnvService,
+    private readonly templateService: TemplateService,
+    private readonly emailService: NodemailerService
+  ) {}
 
   async sendNotification({
     userId,
@@ -57,11 +60,14 @@ export class NotificationService {
       });
 
       if (type === "email") {
-        const from = "Your App <onboarding@resend.dev>";
-        await this.resend.emails.send({ from, to, subject, html });
+        const from = `${appName} <${this.env.get("SMTP_USER")}>`;
+        await this.emailService.sendMail({ from, to, subject, html });
       } else if (type === "sms") {
         // TODO integrate Twilio/Nexmo here
-        console.log(`Sending SMS to ${to}: ${purpose} with data`, metadata);
+        this.logger.warn(
+          `Sending SMS to ${to}: ${purpose} with data`,
+          metadata
+        );
       }
 
       await this.updateNotificationStatus(notification.id, "sent");

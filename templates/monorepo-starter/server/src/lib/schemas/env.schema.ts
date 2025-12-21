@@ -67,7 +67,10 @@ export const envSchema = z.object({
   // ==============================
   // Email (Resend)
   // ==============================
-  RESEND_API_KEY: z.string(),
+  SMTP_HOST: z.string(),
+  SMTP_PORT: z.coerce.number(),
+  SMTP_USER: z.string(),
+  SMTP_PASS: z.string(),
 
   // ==============================
   // API Keys
