@@ -15,15 +15,15 @@ export class PrismaService
   @InjectLogger()
   private readonly logger!: LoggerService;
 
-constructor() {
-  const adapter = new PrismaPg({
-    connectionString: process.env.DB_URI!,
-  });
+  constructor() {
+    const adapter = new PrismaPg({
+      connectionString: process.env.DB_URI!,
+    });
 
-  super({ adapter });
+    super({ adapter });
 
-  Object.assign(this, this.$extends(softDeleteExtension));
-}
+    Object.assign(this, this.$extends(softDeleteExtension));
+  }
 
   async onModuleInit() {
     this.logger.log("Connecting to the database...");

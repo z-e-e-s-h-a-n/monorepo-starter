@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
 import type { Request, Response } from "express";
@@ -13,19 +14,14 @@ import {
   SignInDto,
   SignUpDto,
   ValidateOtpDto,
-} from "@dto/auth.dto";
+} from "@workspace/contracts/auth";
 import { TokenService } from "@modules/token/token.service";
-import { Prisma, type User } from "@generated/prisma";
+import { Prisma } from "@generated/prisma";
 import { OtpService } from "./otp.service";
 import { NotificationService } from "@modules/notification/notification.service";
-import { LoggerService } from "@modules/logger/logger.service";
-import { InjectLogger } from "@decorators/logger.decorator";
 
 @Injectable()
 export class AuthService {
-  @InjectLogger()
-  private readonly logger!: LoggerService;
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly tokenService: TokenService,
@@ -34,51 +30,11 @@ export class AuthService {
   ) {}
 
   async signUp(dto: SignUpDto) {
-    const { key, value, query } = this.parseIdentifier(dto.identifier);
-    this.logger.log(`🔐 Sign-up attempt`, {
-      identifier: dto.identifier,
-    });
-
-    const existingUser = await this.prisma.user.findUnique({
-      where: query,
-    });
-
-    if (existingUser) {
-      throw new BadRequestException(`${key} already in use.`);
+    if (!dto.password) {
+      throw new BadRequestException("Password should not be empty.");
     }
 
-    const hashedPassword = await this.hashPassword(dto.password);
-
-    const newUser = await this.prisma.user.create({
-      data: {
-        [key]: value,
-        password: hashedPassword,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        displayName: `${dto.firstName} ${dto.lastName}`.trim(),
-        username: dto.username,
-        roles: { create: [{ role: "customer" }] },
-      },
-    });
-
-    await this.notifyService.sendNotification({
-      userId: newUser.id,
-      purpose: "signup",
-      to: value,
-      metadata: { user: newUser },
-    });
-
-    await this.otpService.sendOtp({
-      userId: newUser.id,
-      identifier: value,
-      purpose: "verifyIdentifier",
-      metadata: { user: newUser },
-    });
-
-    this.logger.log(`✅ Sign-up success`, {
-      userId: newUser.id,
-      identifier: dto.identifier,
-    });
+    const { key } = await this.createUser(dto, "customer");
 
     return {
       message: `User created successfully. Please verify your ${key}.`,
@@ -86,19 +42,11 @@ export class AuthService {
   }
 
   async signIn(dto: SignInDto, req: Request, res: Response) {
-    const { user, key, value } = await this.findUserByIdentifier(
-      dto.identifier,
-      {
-        roles: true,
-        securitySetting: true,
-      }
+    const { user, key, value, meta } = await this.findUserFail404(
+      dto.identifier
     );
 
-    this.logger.log(`🔐 Sign-in attempt`, {
-      identifier: dto.identifier,
-    });
-
-    if (!user.password) {
+    if (!meta.password) {
       await this.otpService.sendOtp({
         userId: user.id,
         purpose: "setPassword",
@@ -112,9 +60,13 @@ export class AuthService {
       );
     }
 
+    if (!dto.password) {
+      throw new BadRequestException("Password should not be empty.");
+    }
+
     const isPasswordValid = await this.verifyPassword(
       dto.password,
-      user.password
+      meta.password
     );
 
     if (!isPasswordValid) {
@@ -123,8 +75,8 @@ export class AuthService {
 
     await this.checkVerificationStatus(user, key, value, "unverified");
 
-    if (user.securitySetting?.isMfaEnabled) {
-      const otp = await this.otpService.sendOtp({
+    if (meta?.isMfaEnabled) {
+      await this.otpService.sendOtp({
         userId: user.id,
         identifier: value,
         purpose: "verifyMfa",
@@ -132,15 +84,13 @@ export class AuthService {
       });
       return {
         message: "MFA code sent. Please verify to complete login.",
-        data: { secret: otp.secret },
+        action: "verifyMfa",
       };
     }
 
-    const roles = user.roles.map((r) => r.role);
-
     await this.tokenService.createAuthSession(req, res, {
       id: user.id,
-      roles: roles,
+      roles: user.roles,
     });
 
     await this.prisma.user.update({
@@ -155,13 +105,9 @@ export class AuthService {
       metadata: { user },
     });
 
-    this.logger.log(`✅ Sign-in success`, {
-      userId: user.id,
-      identifier: dto.identifier,
-    });
     return {
       message: "Signed in successfully",
-      data: { id: user.id, roles: roles },
+      data: { id: user.id, roles: user.roles },
     };
   }
 
@@ -170,89 +116,113 @@ export class AuthService {
     const tokenId = req.cookies.tokenId;
 
     if (refreshToken && tokenId) {
-      await this.prisma.refreshToken.update({
-        where: { token: refreshToken, id: tokenId },
+      await this.prisma.refreshToken.updateMany({
+        where: { id: tokenId, token: refreshToken },
         data: { blacklisted: true },
       });
     }
 
     this.tokenService.clearAuthCookies(res);
-    this.logger.log("🚪 User signed out", { tokenId });
 
     return { message: "Signed out successfully" };
   }
 
   async requestOtp(dto: RequestOtpDto) {
-    const { user, key, value } = await this.findUserByIdentifier(
-      dto.identifier,
-      { securitySetting: true }
+    const { user, key, value, meta } = await this.findUserFail404(
+      dto.identifier
     );
 
-    if (dto.purpose === "verifyIdentifier") {
-      await this.checkVerificationStatus(user, key, value, "verified");
-      await this.otpService.sendOtp({
-        userId: user.id,
-        identifier: value,
-        purpose: dto.purpose,
-        metadata: { user },
-      });
-      return { message: `Verification OTP sent.` };
-    }
+    switch (dto.purpose) {
+      case "verifyIdentifier": {
+        await this.checkVerificationStatus(user, key, value, "verified");
 
-    if (dto.purpose.includes("Password")) {
-      if (dto.purpose === "setPassword" && user.password) {
-        throw new BadRequestException(
-          "Password already set. Use resetPassword."
-        ); // TODO i don't thing this check need
-      } else if (dto.purpose === "resetPassword" && !user.password) {
-        throw new BadRequestException("No password set. Use setPassword.");
+        await this.otpService.sendOtp({
+          userId: user.id,
+          identifier: value,
+          purpose: dto.purpose,
+          metadata: { user },
+        });
+
+        return { message: "Verification OTP sent." };
       }
 
-      await this.otpService.sendOtp({
-        userId: user.id,
-        identifier: value,
-        purpose: dto.purpose,
-        metadata: { user },
-      });
-      return { message: `${dto.purpose} OTP sent.` };
-    }
+      case "setPassword":
+      case "resetPassword": {
+        if (dto.purpose === "setPassword" && meta.password) {
+          throw new BadRequestException(
+            "Password already set. Use resetPassword."
+          );
+        }
 
-    if (dto.purpose === "changeIdentifier") {
-      await this.otpService.sendOtp({
-        userId: user.id,
-        identifier: value,
-        purpose: dto.purpose,
-        metadata: { user },
-      });
-      return { message: `Change ${key} Otp Send` };
-    }
+        await this.otpService.sendOtp({
+          userId: user.id,
+          identifier: value,
+          purpose: dto.purpose,
+          metadata: { user },
+        });
 
-    if (dto.purpose.includes("Mfa")) {
-      if (dto.purpose === "enableMfa") {
-        if (user.securitySetting?.isMfaEnabled) {
+        return { message: `${dto.purpose} OTP sent.` };
+      }
+
+      case "changeIdentifier": {
+        await this.otpService.sendOtp({
+          userId: user.id,
+          identifier: value,
+          purpose: dto.purpose,
+          metadata: { user },
+        });
+
+        return { message: `Change ${key} OTP sent.` };
+      }
+
+      case "enableMfa": {
+        if (meta?.isMfaEnabled) {
           throw new BadRequestException("MFA is already enabled.");
         }
-      } else if (dto.purpose === "disableMfa") {
-        if (!user.securitySetting?.isMfaEnabled) {
+
+        await this.otpService.sendOtp({
+          userId: user.id,
+          identifier: value,
+          purpose: dto.purpose,
+          metadata: { user },
+        });
+
+        return { message: "enableMfa OTP sent." };
+      }
+
+      case "disableMfa": {
+        if (!meta?.isMfaEnabled) {
           throw new BadRequestException("MFA is already disabled.");
         }
-      }
-      await this.otpService.sendOtp({
-        userId: user.id,
-        identifier: value,
-        purpose: dto.purpose,
-        metadata: { user },
-      });
-      return { message: `${dto.purpose} OTP sent.` };
-    }
 
-    throw new BadRequestException(`Invalid purpose: ${dto.purpose}`);
+        await this.otpService.sendOtp({
+          userId: user.id,
+          identifier: value,
+          purpose: dto.purpose,
+          metadata: { user },
+        });
+
+        return { message: "disableMfa OTP sent." };
+      }
+
+      case "verifyMfa": {
+        await this.otpService.sendOtp({
+          userId: user.id,
+          identifier: value,
+          purpose: dto.purpose,
+          metadata: { user },
+        });
+
+        return { message: "verifyMfa OTP sent." };
+      }
+
+      default:
+        throw new BadRequestException(`Invalid purpose: ${dto.purpose}`);
+    }
   }
 
   async validateOtp(dto: ValidateOtpDto, req: Request, res: Response) {
-    const { key, value, user } = await this.findUserByIdentifier(
-      dto.identifier
-    );
+    const { key, value, user } = await this.findUserFail404(dto.identifier);
 
     await this.otpService.verifyOtp({
       userId: user.id,
@@ -261,90 +231,108 @@ export class AuthService {
       type: dto.type,
     });
 
-    if (dto.purpose === "verifyIdentifier") {
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data:
-          key === "email"
-            ? { isEmailVerified: true }
-            : { isPhoneVerified: true },
-      });
-
-      return { message: `${key} verified successfully.` };
-    }
-
-    if (dto.purpose.includes("Password")) {
-      const otp = await this.otpService.sendOtp({
-        userId: user.id,
-        identifier: value,
-        purpose: dto.purpose,
-        type: "token",
-        notify: false,
-        metadata: { user },
-      });
-      return {
-        message: "OTP validated successfully.",
-        data: { secret: otp.secret },
-      };
-    }
-
-    if (dto.purpose === "changeIdentifier") {
-      const otp = await this.otpService.sendOtp({
-        userId: user.id,
-        identifier: value,
-        purpose: dto.purpose,
-        type: "token",
-        notify: false,
-        metadata: { user },
-      });
-
-      return {
-        message: "OTP validated successfully.",
-        data: { secret: otp.secret },
-      };
-    }
-
-    if (dto.purpose.includes("Mfa")) {
-      //TODO add logic enable mfa
-      if (dto.purpose === "enableMfa") {
-        await this.prisma.securitySetting.update({
-          where: { userId: user.id },
-          data: { isMfaEnabled: true }, // TODO add mfa method details
+    switch (dto.purpose) {
+      case "verifyIdentifier": {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data:
+            key === "email"
+              ? { isEmailVerified: true }
+              : { isPhoneVerified: true },
         });
-      } else if (dto.purpose === "disableMfa") {
+
+        return { message: `${key} verified successfully.` };
+      }
+
+      case "setPassword":
+      case "resetPassword": {
+        const otp = await this.otpService.sendOtp({
+          userId: user.id,
+          identifier: value,
+          purpose: dto.purpose,
+          type: "token",
+          notify: false,
+          metadata: { user },
+        });
+
+        return {
+          message: "OTP validated successfully.",
+          data: { secret: otp.secret },
+        };
+      }
+
+      case "changeIdentifier": {
+        const otp = await this.otpService.sendOtp({
+          userId: user.id,
+          identifier: value,
+          purpose: dto.purpose,
+          type: "token",
+          notify: false,
+          metadata: { user },
+        });
+
+        return {
+          message: "OTP validated successfully.",
+          data: { secret: otp.secret },
+        };
+      }
+
+      case "enableMfa": {
+        const otp = await this.otpService.sendOtp({
+          userId: user.id,
+          identifier: value,
+          purpose: dto.purpose,
+          type: "token",
+          notify: false,
+          metadata: { user },
+        });
+
+        return {
+          message: "OTP verified. Setup MFA details.",
+          data: { secret: otp.secret },
+        };
+      }
+
+      case "disableMfa": {
         await this.prisma.securitySetting.update({
           where: { userId: user.id },
           data: { isMfaEnabled: false },
         });
-      } else if (dto.purpose === "verifyMfa") {
-        const roles = user.roles.map((r) => r.role);
 
+        await this.notifyService.sendNotification({
+          userId: user.id,
+          to: dto.identifier,
+          purpose: dto.purpose,
+          metadata: { user },
+        });
+
+        return { message: "disableMfa successfully." };
+      }
+
+      case "verifyMfa": {
         await this.tokenService.createAuthSession(req, res, {
           id: user.id,
-          roles: roles,
+          roles: user.roles,
+        });
+
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() },
         });
 
         return {
           message: "MFA verified. Signed in successfully.",
-          data: { id: user.id, roles: roles },
+          data: { id: user.id, roles: user.roles },
         };
       }
 
-      await this.notifyService.sendNotification({
-        userId: user.id,
-        to: dto.identifier,
-        purpose: dto.purpose,
-        metadata: { user },
-      });
-
-      return { message: `${dto.purpose} Successfully` };
+      default:
+        throw new BadRequestException(`Invalid purpose: ${dto.purpose}`);
     }
-
-    throw new BadRequestException(`Invalid purpose: ${dto.purpose}`);
   }
 
   async resetPassword(dto: ResetPasswordDto) {
-    const { user } = await this.findUserByIdentifier(dto.identifier);
+    const { user } = await this.findUserFail404(dto.identifier);
 
     const isTokenValid = await this.otpService.verifyOtp({
       userId: user.id,
@@ -371,27 +359,17 @@ export class AuthService {
       metadata: { user },
     });
 
-    this.logger.log(`🔑 Password reset successful`, { userId: user.id });
-
-    return { message: "Password reset successfully" };
+    return {
+      message: `Password ${dto.purpose.split("Password")} successfully`,
+    };
   }
 
   async changeIdentifierReq(dto: ChangeIdentifierDto) {
-    const { user, value } = await this.findUserByIdentifier(dto.identifier);
+    const { user, value } = await this.findUserFail404(dto.identifier);
 
-    const {
-      key: newKey,
-      value: newValue,
-      query: newQuery,
-    } = this.parseIdentifier(dto.newIdentifier);
-
-    const existingUser = await this.prisma.user.findFirst({
-      where: newQuery,
-    });
-
-    if (existingUser) {
-      throw new BadRequestException(`${newKey} already in use.`);
-    }
+    const { key: newKey, value: newValue } = await this.findUserFail200(
+      dto.newIdentifier
+    );
 
     const isTokenValid = await this.otpService.verifyOtp({
       userId: user.id,
@@ -412,18 +390,13 @@ export class AuthService {
       metadata: { user, identifier: value, newIdentifier: newValue },
     });
 
-    this.logger.log("🔄 Identifier change requested", {
-      userId: user.id,
-      newIdentifier: dto.newIdentifier,
-    });
-
     return {
       message: `Link sent to new ${newKey}. Please verify to complete the change.`,
     };
   }
 
   async changeIdentifier(dto: ChangeIdentifierDto) {
-    const { user, key } = await this.findUserByIdentifier(dto.identifier);
+    const { user, key } = await this.findUserFail404(dto.identifier);
 
     await this.otpService.verifyOtp({
       userId: user.id,
@@ -434,7 +407,12 @@ export class AuthService {
 
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { [key]: dto.newIdentifier },
+      data: {
+        [key]: dto.newIdentifier,
+        ...(key === "email"
+          ? { isEmailVerified: false }
+          : { isPhoneVerified: false }),
+      },
     });
 
     await this.prisma.refreshToken.updateMany({
@@ -453,10 +431,63 @@ export class AuthService {
       },
     });
 
-    this.logger.log("✅ Identifier changed successfully", { userId: user.id });
-
     return { message: `${key} changed successfully.` };
   }
+
+  async getUser(req: Request) {
+    const userId = req.user!.id;
+    const { user } = await this.findUserFail404(userId, { id: userId });
+
+    return {
+      message: "User Data Fetched Successfully.",
+      data: user,
+    };
+  }
+
+  async createUser(dto: SignUpDto, role: UserRole) {
+    const { key, value } = await this.findUserFail200(dto.identifier);
+
+    const hashedPassword = dto.password
+      ? await this.hashPassword(dto.password)
+      : undefined;
+
+    const newUser = await this.prisma.user.create({
+      data: {
+        [key]: value,
+        password: hashedPassword,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        displayName: `${dto.firstName} ${dto.lastName}`.trim(),
+        roles: {
+          create: [{ role }],
+        },
+      },
+      select: this.userSelect,
+    });
+
+    const userRoles = newUser.roles.map((r) => r.role);
+    const user = { ...newUser, roles: userRoles };
+
+    await this.notifyService.sendNotification({
+      userId: user.id,
+      purpose: "signup",
+      to: value,
+      metadata: { user },
+    });
+
+    await this.otpService.sendOtp({
+      userId: user.id,
+      identifier: value,
+      purpose: "verifyIdentifier",
+      metadata: { user },
+    });
+
+    return { user, key };
+  }
+
+  // TODO POST /auth/mfa/setup
+  // TODO POST /auth/revoke-sessions
+  // TODO GET /auth/sessions
 
   private async hashPassword(password: string): Promise<string> {
     return argon2.hash(password);
@@ -469,21 +500,48 @@ export class AuthService {
     return argon2.verify(hash, password);
   }
 
-  private async findUserByIdentifier(
-    identifier: string,
-    include: Prisma.UserInclude = {}
-  ) {
-    const { key, value, query } = this.parseIdentifier(identifier);
+  private async findUserFail404(i: string, q?: Prisma.UserWhereUniqueInput) {
+    let { key, value, query } = this.parseIdentifier(i);
+    if (q) query = q;
+
     const user = await this.prisma.user.findUnique({
       where: query,
-      include,
+      select: {
+        ...this.userSelect,
+        password: true,
+        securitySetting: { select: { isMfaEnabled: true } },
+      },
     });
-    if (!user) throw new BadRequestException("User not found");
-    return { user, key, value };
+    if (!user) throw new NotFoundException("User not found");
+    const { password, roles, securitySetting, ...data } = user;
+    const userRoles = roles.map((r) => r.role);
+    return {
+      key,
+      value,
+      user: { ...data, roles: userRoles } satisfies UserResponse,
+      meta: { password, isMfaEnabled: securitySetting?.isMfaEnabled },
+    };
   }
 
+  private findUserFail200 = async (
+    i: string,
+    q?: Prisma.UserWhereUniqueInput
+  ) => {
+    let { key, value, query } = this.parseIdentifier(i);
+    if (q) query = q;
+    const user = await this.prisma.user.findUnique({
+      where: query,
+    });
+
+    if (user) {
+      throw new BadRequestException(`${key} already in use.`);
+    }
+
+    return { key, value };
+  };
+
   private async checkVerificationStatus(
-    user: User,
+    user: UserResponse,
     key: IdentifierKey,
     value: string,
     check: "verified" | "unverified"
@@ -502,25 +560,37 @@ export class AuthService {
         purpose: "verifyIdentifier",
         metadata: { user },
       });
-      this.logger.log(
-        "📨 Auto-sent verification OTP due to unverified identifier",
-        { userId: user.id, key, value }
-      );
 
-      throw new UnauthorizedException(`${key} not verified`);
+      throw new UnauthorizedException({
+        message: `${key} not verified`,
+        action: "verifyIdentifier",
+      });
     }
   }
 
-  private parseIdentifier(identifier: string): {
-    key: IdentifierKey;
-    value: string;
-    query: Prisma.UserWhereUniqueInput;
-  } {
-    const isEmail = identifier.includes("@");
-    const key = isEmail ? "email" : "phone";
-    const value = isEmail ? identifier.toLowerCase() : identifier;
+  private parseIdentifier(i: string) {
+    const isEmail = i.includes("@");
+    const key: IdentifierKey = isEmail ? "email" : "phone";
+    const value = isEmail ? i.toLowerCase() : i;
     const query = key === "email" ? { email: value } : { phone: value };
 
-    return { key, value, query };
+    return { key, value, query: query as Prisma.UserWhereUniqueInput };
   }
+
+  userSelect: Prisma.UserSelect = {
+    id: true,
+    firstName: true,
+    lastName: true,
+    displayName: true,
+    imageUrl: true,
+    email: true,
+    phone: true,
+    isEmailVerified: true,
+    isPhoneVerified: true,
+    lastLoginAt: true,
+    createdAt: true,
+    updatedAt: true,
+    deletedAt: true,
+    roles: { select: { role: true } },
+  };
 }

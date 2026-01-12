@@ -9,8 +9,10 @@ export class PublicService {
   private readonly logger!: LoggerService;
 
   welcome(req: Request) {
+    const origin = `${req.protocol}://${req.get("host")}`;
+
     this.logger.log(
-      `Welcome endpoint hit from IP: ${req.ip}, path: ${req.url}`
+      `Welcome endpoint hit from IP: ${req.ip}, path: ${origin}${req.url}`
     );
     return { message: "Server is running 🚀" };
   }

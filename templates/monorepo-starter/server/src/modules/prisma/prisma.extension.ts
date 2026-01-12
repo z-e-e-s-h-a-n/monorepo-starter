@@ -1,62 +1,100 @@
 import { Prisma } from "@generated/prisma";
 import { SoftDeleteModels } from "./soft-delete.models";
 
-const hasDeletedAt = (model: string) => SoftDeleteModels.has(model);
+export type SoftDeleteExtraArgs = {
+  force?: boolean | string;
+};
 
-export const softDeleteExtension = Prisma.defineExtension({
-  name: "softDelete",
+export const softDeleteExtension = Prisma.defineExtension((client) =>
+  client.$extends({
+    name: "softDelete",
+    query: {
+      $allModels: {
+        // Single delete
+        async delete<T, A extends Prisma.Args<T, "delete">>({
+          model,
+          args,
+          query,
+        }: {
+          model: string;
+          args: Prisma.Exact<A & SoftDeleteExtraArgs, A & SoftDeleteExtraArgs>;
+          query: (args: A) => Promise<Prisma.Result<T, A, "delete">>;
+        }) {
+          const hasDel = SoftDeleteModels.has(model);
+          const { force, ...rest } = args as A & SoftDeleteExtraArgs;
+          const isForce = force === true || force === "true";
 
-  query: {
-    $allModels: {
-      async delete({ model, args, query }) {
-        const hasDel = hasDeletedAt(model);
-        const force = (args as any).force;
+          if (hasDel && !isForce) {
+            return (client as any)[model].update({
+              where: rest.where,
+              data: { deletedAt: new Date() },
+            });
+          }
 
-        if (hasDel && !force) {
-          const prisma = Prisma.getExtensionContext(this);
-          return (prisma as any)[model].update({
-            where: args.where,
-            data: { deletedAt: new Date() },
-          });
-        }
+          return query(rest as A);
+        },
 
-        return query(args);
-      },
+        // Delete many
+        async deleteMany<T, A extends Prisma.Args<T, "deleteMany">>({
+          model,
+          args,
+          query,
+        }: {
+          model: string;
+          args: Prisma.Exact<A & SoftDeleteExtraArgs, A & SoftDeleteExtraArgs>;
+          query: (args: A) => Promise<Prisma.Result<T, A, "deleteMany">>;
+        }) {
+          const hasDel = SoftDeleteModels.has(model);
+          const { force, ...rest } = args as A & SoftDeleteExtraArgs;
+          const isForce = force === true || force === "true";
 
-      async deleteMany({ model, args, query }) {
-        const hasDel = hasDeletedAt(model);
-        const force = (args as any).force;
+          if (hasDel && !isForce) {
+            return (client as any)[model].updateMany({
+              where: rest.where,
+              data: { deletedAt: new Date() },
+            });
+          }
 
-        if (hasDel && !force) {
-          const prisma = Prisma.getExtensionContext(this);
-          return (prisma as any)[model].updateMany({
-            where: args.where,
-            data: { deletedAt: new Date() },
-          });
-        }
+          return query(rest as A);
+        },
 
-        return query(args);
-      },
+        // Intercept all operations
+        async $allOperations<T, A>({
+          model,
+          operation,
+          args,
+          query,
+        }: {
+          model: string;
+          operation: string;
+          args: A & SoftDeleteExtraArgs;
+          query: (args: A) => Promise<Prisma.Result<T, A, any>>;
+        }) {
+          const hasDel = SoftDeleteModels.has(model);
+          const readOps = [
+            "findUnique",
+            "findFirst",
+            "findMany",
+            "count",
+            "aggregate",
+          ] as const;
 
-      async $allOperations({ model, operation, args, query }) {
-        const hasDel = hasDeletedAt(model);
-        const _args = { ...(args as Record<string, any>) };
-        const targetOps = ["findFirst", "findMany", "count", "aggregate"];
+          if (!hasDel || !readOps.includes(operation as any)) {
+            return query(args as A);
+          }
 
-        if (!targetOps.includes(operation) || !hasDel) return query(args);
+          const next: any = { ...args };
 
-        if (_args.includeDeleted) {
-          delete _args.includeDeleted;
-          return query(_args);
-        }
+          next.where ??= {};
+          if (next.where.deletedAt === undefined) {
+            next.where.deletedAt = null;
+          }
 
-        _args.where = _args.where ?? {};
-        if (!("deletedAt" in _args.where)) {
-          _args.where = { ..._args.where, deletedAt: null };
-        }
-
-        return query(_args);
+          return query(next as A);
+        },
       },
     },
-  },
-});
+  })
+);
+
+export type ExtendedPrismaClient = ReturnType<typeof softDeleteExtension>;

@@ -8,6 +8,6 @@
       "@workspace/ui/*": ["src/*"]
     }
   },
-  "include": ["."],
+  "include": [".",  "../../packages/contracts/src/**/*.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

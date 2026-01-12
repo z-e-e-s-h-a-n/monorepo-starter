@@ -113,27 +113,31 @@ export class OAuthService implements OnModuleInit {
         include: { roles: true },
       });
 
+      const { roles, ...rest } = user;
+
       await this.notifyService.sendNotification({
-        userId: user.id,
+        userId: rest.id,
         purpose: "signup",
-        to: user.email!,
-        metadata: { user },
+        to: rest.email!,
+        metadata: { user: rest },
       });
     }
 
-    if (!user.password) {
+    const { roles, password, ...rest } = user;
+
+    if (!password) {
       await this.otpService.sendOtp({
-        userId: user.id,
+        userId: rest.id,
         purpose: "setPassword",
         identifier: normalized.email,
         type: "token",
-        metadata: { user },
+        metadata: { user: rest },
       });
     }
 
     return {
-      id: user.id,
-      roles: user.roles.map((r) => r.role),
+      id: rest.id,
+      roles: roles.map((r) => r.role),
     };
   }
 

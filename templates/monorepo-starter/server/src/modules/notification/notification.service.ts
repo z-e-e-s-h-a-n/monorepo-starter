@@ -11,12 +11,13 @@ import { LoggerService } from "@modules/logger/logger.service";
 import { NodemailerService } from "./nodemailer.service";
 import { InjectLogger } from "@decorators/logger.decorator";
 import { appName } from "@constants/app";
+import type { TemplateProps } from "@templates/notification.templates";
 
 interface SendNotificationProps {
   userId: string;
   purpose: NotificationPurpose;
   to: string;
-  metadata: Record<string, any>;
+  metadata: TemplateProps;
 }
 
 @Injectable()
@@ -52,11 +53,6 @@ export class NotificationService {
         title: subject,
         message: text,
         purpose,
-        metadata,
-      });
-
-      this.logger.debug(`Notification record created`, {
-        notification: notification.id,
       });
 
       if (type === "email") {
@@ -64,10 +60,7 @@ export class NotificationService {
         await this.emailService.sendMail({ from, to, subject, html });
       } else if (type === "sms") {
         // TODO integrate Twilio/Nexmo here
-        this.logger.warn(
-          `Sending SMS to ${to}: ${purpose} with data`,
-          metadata
-        );
+        this.logger.warn(`Sending SMS to ${to}: ${purpose}`);
       }
 
       await this.updateNotificationStatus(notification.id, "sent");
@@ -85,8 +78,7 @@ export class NotificationService {
     userId: string,
     purpose: NotificationPurpose,
     title: string,
-    message: string,
-    metadata?: Record<string, any>
+    message: string
   ) {
     return this.createNotificationRecord({
       userId,
@@ -94,7 +86,6 @@ export class NotificationService {
       title,
       message,
       purpose,
-      metadata,
       status: "sent",
     });
   }

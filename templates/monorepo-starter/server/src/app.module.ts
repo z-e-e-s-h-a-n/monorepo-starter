@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { ScheduleModule } from "@nestjs/schedule";
-import { APP_GUARD } from "@nestjs/core";
+import { APP_GUARD, APP_PIPE } from "@nestjs/core";
 import { EnvModule } from "@modules/env/env.module";
 import { validateEnv } from "@schemas/env.schema";
 import { AuthGuard } from "@guards/auth.guard";
@@ -15,10 +14,14 @@ import { NotificationModule } from "@modules/notification/notification.module";
 import { TemplateModule } from "@modules/template/template.module";
 import { AllExceptionsFilter } from "@filters/exceptions.filter";
 import { ResponseInterceptor } from "@/lib/interceptors/response.interceptor";
+import { ZodValidationPipe } from "nestjs-zod";
+import { CacheModule } from "@modules/cache/cache.module";
+import { AdminModule } from "./modules/admin/admin.module";
 
 @Module({
   imports: [
     PublicModule,
+    AdminModule,
     PrismaModule,
     LoggerModule,
     EnvModule,
@@ -26,8 +29,8 @@ import { ResponseInterceptor } from "@/lib/interceptors/response.interceptor";
     TokenModule,
     TemplateModule,
     NotificationModule,
+    CacheModule,
     SchedulerModule,
-    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       validate: validateEnv,
@@ -38,6 +41,10 @@ import { ResponseInterceptor } from "@/lib/interceptors/response.interceptor";
     {
       provide: APP_GUARD,
       useClass: AuthGuard,
+    },
+    {
+      provide: APP_PIPE,
+      useClass: ZodValidationPipe,
     },
     AllExceptionsFilter,
     ResponseInterceptor,

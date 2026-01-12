@@ -80,10 +80,9 @@ export const envSchema = z.object({
   // ==============================
   // Admin
   // ==============================
+  ADMIN_NAME: z.string(),
   ADMIN_EMAIL: z.string(),
   ADMIN_PASSWORD: z.string(),
-  ADMIN_NAME: z.string(),
-  ADMIN_PHONE: z.string(),
 });
 
 export function validateEnv(config: Record<string, any>) {

@@ -53,48 +53,6 @@ enum NotificationStatus {
   read
 }
 
-enum PassengerType {
-  ADT
-  CHD
-  INF
-}
-
-enum FlightTicketType {
-  oneway
-  return
-  multicity
-}
-
-enum VisaEntryType {
-  single
-  multiple
-}
-
-enum VisaServiceType {
-  umrah
-  visit
-  tourist
-  transit
-}
-
-enum TourCategory {
-  domestic
-  international
-  custom
-}
-
-enum BookingStatus {
-  pending
-  confirmed
-  canceled
-}
-
-enum TourPriceCategory {
-  standard
-  deluxe
-  premium
-}
-
 //
 // AUTH MODELS
 //
@@ -102,12 +60,11 @@ enum TourPriceCategory {
 model User {
   // Core fields
   id          String  @id @default(ulid())
-  username    String? @unique
-  password    String?
   firstName   String
   lastName    String?
   displayName String
   imageUrl    String?
+  password    String?
 
   // Contact info
   email           String? @unique
@@ -135,7 +92,6 @@ model User {
   // Indexes
   @@index([email])
   @@index([phone])
-  @@index([username])
   @@index([email, isEmailVerified])
   @@index([phone, isPhoneVerified])
 }
@@ -193,7 +149,6 @@ model RefreshToken {
   lastUsed    DateTime @default(now())
   createdAt   DateTime @default(now())
   expiresAt   DateTime
-  isActive    Boolean  @default(true)
   blacklisted Boolean  @default(false)
 
   @@index([userId])
@@ -218,7 +173,7 @@ model Otp {
 }
 
 model Notification {
-  id        String             @id @default(cuid())
+  id        String             @id @default(ulid())
   userId    String
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   type      NotificationType

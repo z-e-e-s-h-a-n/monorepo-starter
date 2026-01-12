@@ -1,6 +1,6 @@
 {
   "name": "create-zhx-monorepo",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "Create a ZHX monorepo with one command",
   "bin": {
     "create-zhx-monorepo": "bin/index.js"
@@ -8,7 +8,7 @@
   "type": "module",
   "license": "MIT",
   "engines": {
-    "node": ">=18"
+    "node": ">=24"
   },
   "dependencies": {
     "fs-extra": "^11.3.3",

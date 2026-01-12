@@ -5,20 +5,20 @@ export const slugify = (str: string, slug?: string) => {
 
   return base
     .toLowerCase()
-    .replace(/\s+/g, "-") // replace spaces with dashes
-    .replace(/[^\w\-]+/g, "") // remove invalid chars
-    .replace(/\-\-+/g, "-") // collapse multiple dashes
-    .replace(/^-+/, "") // trim starting dash
-    .replace(/-+$/, ""); // trim ending dash
+    .replace(/\s+/g, "-")
+    .replace(/[^\w\-]+/g, "")
+    .replace(/\-\-+/g, "-")
+    .replace(/^-+/, "")
+    .replace(/-+$/, "");
 };
 
-export const parseExpiry = (exp: string, future = false): number => {
-  const val = ms(exp as StringValue);
+export const parseExpiry = (exp: StringValue, future = false): number => {
+  const val = ms(exp);
   if (future) return Date.now() + val;
   return val;
 };
 
-export const expiryDate = (exp: string, future = false): Date => {
+export const expiryDate = (exp: StringValue, future = false): Date => {
   const val = parseExpiry(exp, future);
   return new Date(val);
 };

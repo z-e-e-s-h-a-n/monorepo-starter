@@ -1,276 +1,392 @@
-import type { EnvService } from "@modules/env/env.service";
-import type { Otp, User } from "@generated/prisma";
+import type { Otp } from "@generated/prisma";
 import { appName } from "@constants/app";
 
+/* ======================================================
+   Base styles
+====================================================== */
+
 const baseStyles = `
-  font-family: Arial, sans-serif;
-  color: #222;
-  line-height: 1.6;
+  margin:0;
+  padding:0;
+  background:#f9fafb;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  color:#111827;
+`;
+
+const containerStyles = `
+  max-width:600px;
+  margin:0 auto;
+  background:#ffffff;
+  border-radius:10px;
+  padding:32px;
+`;
+
+const headerStyles = `
+  font-size:22px;
+  font-weight:700;
+  margin-bottom:8px;
+`;
+
+const textStyles = `
+  font-size:15px;
+  line-height:1.6;
+  margin:12px 0;
+`;
+
+const mutedTextStyles = `
+  font-size:13px;
+  color:#6b7280;
 `;
 
 const buttonStyles = `
   display:inline-block;
-  padding:12px 20px;
-  background-color:#007bff;
-  color:#fff;
+  padding:12px 22px;
+  background:#2563eb;
+  color:#ffffff;
   text-decoration:none;
-  border-radius:6px;
-  font-weight:bold;
+  border-radius:8px;
+  font-weight:600;
 `;
 
+const codeStyles = `
+  font-size:20px;
+  font-weight:700;
+  letter-spacing:4px;
+  background:#f3f4f6;
+  padding:12px 20px;
+  border-radius:8px;
+  display:inline-block;
+  font-family:monospace;
+`;
+
+/* ======================================================
+   Layout helpers
+====================================================== */
+
+const EmailLayout = (content: string) => `
+<div style="${baseStyles}">
+  <div style="${containerStyles}">
+    ${content}
+    ${EmailFooter()}
+  </div>
+</div>
+`;
+
+const EmailHeader = (title: string, subtitle?: string) => `
+<div style="margin-bottom:24px;">
+  <h1 style="${headerStyles}">${title}</h1>
+  ${subtitle ? `<p style="${mutedTextStyles}">${subtitle}</p>` : ""}
+</div>
+`;
+
+const EmailFooter = () => `
+<hr style="margin:32px 0;border:none;border-top:1px solid #e5e7eb;" />
+<p style="${mutedTextStyles}">
+  Sent by <strong>${appName}</strong><br/>
+  If you didn’t request this, you can safely ignore this message.
+</p>
+<p style="${mutedTextStyles}">
+  © ${new Date().getFullYear()} ${appName}
+</p>
+`;
+
+const Greeting = (name: string) => `
+<p style="${textStyles}">Hello <strong>${name}</strong>,</p>
+`;
+
+const ActionBlock = (link: string, label: string, secret?: string) =>
+  secret
+    ? `
+<table width="100%" style="margin:24px 0;">
+<tr>
+<td><div style="${codeStyles}">${secret}</div></td>
+<td style="padding-left:16px;">
+  <a href="${link}" style="${buttonStyles}">${label}</a>
+</td>
+</tr>
+</table>`
+    : `
+<div style="margin:24px 0;text-align:center;">
+  <a href="${link}" style="${buttonStyles}">${label}</a>
+</div>`;
+
+/* ======================================================
+   Types
+====================================================== */
+
 export interface TemplateProps {
-  user: User;
+  user: Optional<UserResponse, "roles">;
   otp?: Otp;
   identifier?: string;
   newIdentifier?: string;
-  env?: EnvService;
+  clientUrl?: Nullable<string>;
   message?: string;
 }
 
-/** Sign up email */
+/* ======================================================
+   Signup
+====================================================== */
+
 export const signupTemplate = ({ user }: TemplateProps) => ({
-  subject: `🎉 Welcome, ${user.displayName}!`,
-  html: `
-    <div style="${baseStyles}">
-      <h1>Welcome to ${appName}, ${user.displayName}!</h1>
-      <p>We’re glad to have you onboard. Explore and make the most of our platform.</p>
-      <p>— The ${appName} Team</p>
-    </div>
-  `,
-  text: `Welcome to ${appName}, ${user.displayName}! Enjoy exploring the platform.`,
+  subject: `Welcome to ${appName}`,
+  html: EmailLayout(`
+    ${EmailHeader("Welcome 👋", "Your account is ready")}
+    ${Greeting(user.displayName)}
+    <p style="${textStyles}">
+      Your account has been created successfully.
+    </p>
+    <p style="${textStyles}">
+      You can now sign in and continue.
+    </p>
+  `),
+  text: `Welcome to ${appName}. Your account is ready.`,
 });
 
-/** Sign in email */
+/* ======================================================
+   Sign-in notification
+====================================================== */
+
 export const signinTemplate = ({ user }: TemplateProps) => ({
-  subject: `🔐 You’ve signed in to ${appName}`,
-  html: `
-    <div style="${baseStyles}">
-      <h2>Hi ${user.displayName},</h2>
-      <p>You’ve successfully signed in to your account.</p>
-      <p>If this wasn’t you, please <strong>reset your password</strong> immediately.</p>
-      <p>— The ${appName} Team</p>
-    </div>
-  `,
-  text: `Hi ${user.displayName}, you’ve logged in. If this wasn’t you, reset your password immediately.`,
+  subject: `New sign-in detected`,
+  html: EmailLayout(`
+    ${EmailHeader("New sign-in 🔐")}
+    ${Greeting(user.displayName)}
+    <p style="${textStyles}">
+      A sign-in to your account was just detected.
+    </p>
+    <p style="${textStyles}">
+      If this wasn’t you, please secure your account.
+    </p>
+  `),
+  text: `A new sign-in was detected on your account.`,
 });
 
-/** Set password template (two-phase) */
+/* ======================================================
+   Set password (two-phase)
+====================================================== */
+
 export const setPasswordTemplate = ({
   user,
   otp,
   identifier,
-  env,
-}: TemplateProps) => {
-  if (otp) {
-    const link = `${env?.get("CLIENT_ENDPOINT")}/set-password?identifier=${identifier}&purpose=${otp.purpose}&secret=${otp.secret}&type=${otp.type}`;
-    return {
-      subject: `🔐 Complete Account Setup`,
-      html: `
-        <div style="${baseStyles}">
-          <h2>Hello ${user.displayName},</h2>
-          <p>Use the code below to set your password and complete your account setup:</p>
-          <h3>${otp.secret}</h3>
-          <a href="${link}" style="${buttonStyles}">Set Password</a>
-          <p>If you didn’t request this, ignore this email.</p>
-        </div>
-      `,
-      text: `Hi ${user.displayName}, your OTP is ${otp.secret}. Set your password here: ${link}`,
-    };
-  } else {
-    return {
-      subject: `✅ Password Set Successfully`,
-      html: `
-        <div style="${baseStyles}">
-          <h2>Hello ${user.displayName},</h2>
-          <p>Your password has been successfully set. You can now log in to your account.</p>
-        </div>
-      `,
-      text: `Hi ${user.displayName}, your password has been set. You can now log in.`,
-    };
-  }
-};
+  clientUrl,
+}: TemplateProps) =>
+  otp
+    ? {
+        subject: `Set your password`,
+        html: EmailLayout(`
+          ${EmailHeader("Set your password 🔑")}
+          ${Greeting(user.displayName)}
+          <p style="${textStyles}">
+            Complete your setup by creating a password.
+          </p>
+          ${ActionBlock(
+            `${clientUrl}/set-password?identifier=${identifier}&purpose=${otp.purpose}&secret=${otp.secret}&type=${otp.type}`,
+            "Set password",
+            otp.secret
+          )}
+          <p style="${mutedTextStyles}">This code expires soon.</p>
+        `),
+        text: `Your setup code is ${otp.secret}.`,
+      }
+    : {
+        subject: `Password set successfully`,
+        html: EmailLayout(`
+          ${EmailHeader("Password updated ✅")}
+          ${Greeting(user.displayName)}
+          <p style="${textStyles}">
+            Your password has been set successfully.
+          </p>
+        `),
+        text: `Your password has been set.`,
+      };
 
-/** Reset password template (two-phase) */
+/* ======================================================
+   Reset password (two-phase)
+====================================================== */
+
 export const resetPasswordTemplate = ({
   user,
   otp,
   identifier,
-  env,
-}: TemplateProps) => {
-  if (otp) {
-    const link = `${env?.get("CLIENT_ENDPOINT")}/reset-password?identifier=${identifier}&purpose=${otp.purpose}&secret=${otp.secret}&type=${otp.type}`;
-    return {
-      subject: `🔁 Reset Your Password`,
-      html: `
-        <div style="${baseStyles}">
-          <h2>Hello ${user.displayName},</h2>
-          <p>We received a request to reset your password for <strong>${identifier}</strong>. Use the code below:</p>
-          <h3>${otp.secret}</h3>
-          <a href="${link}" style="${buttonStyles}">Reset Password</a>
-          <p>If you didn’t request this, ignore this email.</p>
-        </div>
-      `,
-      text: `Hi ${user.displayName}, your OTP to reset password is ${otp.secret}. Reset here: ${link}`,
-    };
-  } else {
-    return {
-      subject: `✅ Password Reset Successfully`,
-      html: `
-        <div style="${baseStyles}">
-          <h2>Hello ${user.displayName},</h2>
-          <p>Your password has been successfully reset. You can now log in to your account.</p>
-        </div>
-      `,
-      text: `Hi ${user.displayName}, your password has been reset. You can now log in.`,
-    };
-  }
-};
+  clientUrl,
+}: TemplateProps) =>
+  otp
+    ? {
+        subject: `Reset your password`,
+        html: EmailLayout(`
+          ${EmailHeader("Reset password 🔄")}
+          ${Greeting(user.displayName)}
+          <p style="${textStyles}">
+            Use the code below to reset your password.
+          </p>
+          ${ActionBlock(
+            `${clientUrl}/reset-password?identifier=${identifier}&purpose=${otp.purpose}&secret=${otp.secret}&type=${otp.type}`,
+            "Reset password",
+            otp.secret
+          )}
+          <p style="${mutedTextStyles}">Code expires shortly.</p>
+        `),
+        text: `Your reset code is ${otp.secret}.`,
+      }
+    : {
+        subject: `Password reset successful`,
+        html: EmailLayout(`
+          ${EmailHeader("Password updated ✅")}
+          ${Greeting(user.displayName)}
+          <p style="${textStyles}">
+            Your password has been reset successfully.
+          </p>
+        `),
+        text: `Password reset successful.`,
+      };
 
-/** Verify identifier template */
+/* ======================================================
+   Verify identifier
+====================================================== */
+
 export const verifyIdentifierTemplate = ({
   user,
   otp,
   identifier,
-  env,
+  clientUrl,
 }: TemplateProps) => {
-  const link = `${env?.get("CLIENT_ENDPOINT")}/verify?identifier=${identifier}&purpose=${otp?.purpose}&secret=${otp?.secret}&type=${otp?.type}`;
+  const type = identifier?.includes("@") ? "contact detail" : "contact detail";
+  const link = `${clientUrl}/verify?identifier=${identifier}&purpose=${otp?.purpose}&secret=${otp?.secret}&type=${otp?.type}`;
+
   return {
-    subject: `📧 Verify Your Account`,
-    html: `
-      <div style="${baseStyles}">
-        <h2>Hello ${user.displayName},</h2>
-        <p>Please verify your ${identifier?.includes("@") ? "email address" : "phone number"} to activate your account.</p>
-        <p>Your verification code: <strong>${otp?.secret}</strong></p>
-        <a href="${link}" style="${buttonStyles}">Verify Now</a>
-      </div>
-    `,
-    text: `Hi ${user.displayName}, your OTP is ${otp?.secret}. Verify here: ${link}`,
+    subject: `Verify your account`,
+    html: EmailLayout(`
+      ${EmailHeader("Verification required")}
+      ${Greeting(user.displayName)}
+      <p style="${textStyles}">
+        Please verify your ${type} to continue.
+      </p>
+      ${otp ? ActionBlock(link, "Verify", otp.secret) : ""}
+    `),
+    text: `Your verification code is ${otp?.secret}.`,
   };
 };
 
-/** Change identifier template (two-phase) */
+/* ======================================================
+   Change identifier (two-phase)
+====================================================== */
+
 export const changeIdentifierTemplate = ({
   user,
   otp,
   identifier,
   newIdentifier,
-  env,
-}: TemplateProps) => {
-  const identifierType = identifier?.includes("@")
-    ? "email address"
-    : "phone number";
-  if (otp) {
-    const link = `${env?.get("CLIENT_ENDPOINT")}/confirm-change?identifier=${identifier}&newIdentifier=${newIdentifier}&purpose=${otp.purpose}&secret=${otp.secret}&type=${otp.type}`;
-    return {
-      subject: `📨 Confirm ${identifierType} Change — ${appName}`,
-      html: `
-        <div style="${baseStyles}">
-          <h2>Hello ${user.displayName},</h2>
-          <p>We received a request to change your ${identifierType}.</p>
-          <p>Previous ${identifierType}: <strong>${identifier}</strong></p>
-          <p>New ${identifierType}: <strong>${newIdentifier}</strong></p>
-          <a href="${link}" style="${buttonStyles}">Confirm Change</a>
-          <p>If you didn’t request this, ignore this email and secure your account.</p>
-        </div>
-      `,
-      text: `Hi ${user.displayName}, request to change ${identifierType} from ${identifier} to ${newIdentifier}. Confirm here: ${link}`,
-    };
-  } else {
-    return {
-      subject: `✅ ${identifierType} Changed Successfully — ${appName}`,
-      html: `
-        <div style="${baseStyles}">
-          <h2>Hello ${user.displayName},</h2>
-          <p>Your ${identifierType} has been successfully updated.</p>
-          <p>Previous ${identifierType}: <strong>${identifier}</strong></p>
-          <p>New ${identifierType}: <strong>${newIdentifier}</strong></p>
-          <p>If this wasn’t you, update your credentials immediately.</p>
-        </div>
-      `,
-      text: `Hi ${user.displayName}, your ${identifierType} was changed from ${identifier} to ${newIdentifier}.`,
-    };
-  }
-};
+  clientUrl,
+}: TemplateProps) =>
+  otp
+    ? {
+        subject: `Confirm change request`,
+        html: EmailLayout(`
+          ${EmailHeader("Confirm change 🔄")}
+          ${Greeting(user.displayName)}
+          <p style="${textStyles}">
+            A request was made to update your contact information.
+          </p>
+          ${ActionBlock(
+            `${clientUrl}/confirm-change?identifier=${identifier}&newIdentifier=${newIdentifier}&purpose=${otp.purpose}&secret=${otp.secret}&type=${otp.type}`,
+            "Confirm change",
+            otp.secret
+          )}
+        `),
+        text: `Confirm the requested change.`,
+      }
+    : {
+        subject: `Update successful`,
+        html: EmailLayout(`
+          ${EmailHeader("Update completed ✅")}
+          ${Greeting(user.displayName)}
+          <p style="${textStyles}">
+            Your contact information has been updated.
+          </p>
+        `),
+        text: `Your information was updated successfully.`,
+      };
 
-/** MFA Templates */
+/* ======================================================
+   MFA
+====================================================== */
+
 export const verifyMfaTemplate = ({ user, otp }: TemplateProps) => ({
-  subject: `📲 Your 2FA Code`,
-  html: `
-    <div style="${baseStyles}">
-      <h2>Hello ${user.displayName},</h2>
-      <p>Your two-factor authentication code is:</p>
-      <h3>${otp?.secret}</h3>
-      <p>This code expires shortly — do not share it.</p>
+  subject: `Your verification code`,
+  html: EmailLayout(`
+    ${EmailHeader("Verification code 🔐")}
+    ${Greeting(user.displayName)}
+    <div style="text-align:center;margin:24px 0;">
+      <div style="${codeStyles}">${otp?.secret}</div>
+      <p style="${mutedTextStyles}">Expires shortly</p>
     </div>
-  `,
-  text: `Hi ${user.displayName}, your 2FA code is ${otp?.secret}.`,
+  `),
+  text: `Your code is ${otp?.secret}.`,
 });
 
-export const enableMfaTemplate = ({ user, otp }: TemplateProps) => {
-  if (otp) {
-    return {
-      subject: `🔑 Enable 2FA — OTP Required`,
-      html: `
-        <div style="${baseStyles}">
-          <h2>Hello ${user.displayName},</h2>
-          <p>Use this code to enable 2FA for your account:</p>
-          <h3>${otp.secret}</h3>
-          <p>It expires soon. Do not share this code.</p>
-        </div>
-      `,
-      text: `Hi ${user.displayName}, use OTP ${otp.secret} to enable 2FA.`,
-    };
-  } else {
-    return {
-      subject: `✅ 2FA Enabled`,
-      html: `
-        <div style="${baseStyles}">
-          <h2>Hello ${user.displayName},</h2>
-          <p>Two-factor authentication has been enabled successfully. Your account is now more secure.</p>
-        </div>
-      `,
-      text: `Hi ${user.displayName}, 2FA has been enabled.`,
-    };
-  }
-};
+export const enableMfaTemplate = ({ user, otp }: TemplateProps) =>
+  otp
+    ? {
+        subject: `Enable additional security`,
+        html: EmailLayout(`
+          ${EmailHeader("Enable security 🔒")}
+          ${Greeting(user.displayName)}
+          <div style="text-align:center;margin:24px 0;">
+            <div style="${codeStyles}">${otp.secret}</div>
+          </div>
+        `),
+        text: `Your setup code is ${otp.secret}.`,
+      }
+    : {
+        subject: `Security enabled`,
+        html: EmailLayout(`
+          ${EmailHeader("Security enabled ✅")}
+          ${Greeting(user.displayName)}
+          <p style="${textStyles}">
+            Additional security has been enabled for your account.
+          </p>
+        `),
+        text: `Security enabled.`,
+      };
 
-export const disableMfaTemplate = ({ user, otp }: TemplateProps) => {
-  if (otp) {
-    return {
-      subject: `🔑 Disable 2FA — OTP Required`,
-      html: `
-        <div style="${baseStyles}">
-          <h2>Hello ${user.displayName},</h2>
-          <p>Use this code to disable 2FA:</p>
-          <h3>${otp.secret}</h3>
-          <p>If this wasn’t you, secure your account immediately.</p>
-        </div>
-      `,
-      text: `Hi ${user.displayName}, your OTP to disable 2FA is ${otp.secret}.`,
-    };
-  } else {
-    return {
-      subject: `⚠️ 2FA Disabled`,
-      html: `
-        <div style="${baseStyles}">
-          <h2>Hello ${user.displayName},</h2>
-          <p>Two-factor authentication has been disabled. If this wasn’t you, re-enable it immediately.</p>
-        </div>
-      `,
-      text: `Hi ${user.displayName}, 2FA has been disabled.`,
-    };
-  }
-};
+export const disableMfaTemplate = ({ user, otp }: TemplateProps) =>
+  otp
+    ? {
+        subject: `Disable additional security`,
+        html: EmailLayout(`
+          ${EmailHeader("Disable security ⚠️")}
+          ${Greeting(user.displayName)}
+          <div style="text-align:center;margin:24px 0;">
+            <div style="${codeStyles}">${otp.secret}</div>
+          </div>
+        `),
+        text: `Your disable code is ${otp.secret}.`,
+      }
+    : {
+        subject: `Security disabled`,
+        html: EmailLayout(`
+          ${EmailHeader("Security disabled ⚠️")}
+          ${Greeting(user.displayName)}
+          <p style="${textStyles}">
+            Additional security has been disabled.
+          </p>
+        `),
+        text: `Security disabled.`,
+      };
 
-/** Security alert template */
+/* ======================================================
+   Security alert
+====================================================== */
+
 export const securityAlertTemplate = ({ user, message }: TemplateProps) => ({
-  subject: `⚠️ Security Alert`,
-  html: `
-    <div style="${baseStyles}">
-      <h2>Hello ${user.displayName},</h2>
-      <p>${message}</p>
-      <p>If you notice any suspicious activity, update your password immediately.</p>
+  subject: `Security alert`,
+  html: EmailLayout(`
+    ${EmailHeader("Security alert 🚨")}
+    ${Greeting(user.displayName)}
+    <div style="background:#fef2f2;padding:16px;border-radius:8px;">
+      <p style="margin:0;font-weight:600;">${message}</p>
     </div>
-  `,
-  text: `Hi ${user.displayName}, ${message}`,
+  `),
+  text: `Security alert: ${message}`,
 });

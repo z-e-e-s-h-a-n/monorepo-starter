@@ -1,12 +1,13 @@
+import crypto from "crypto";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
-import { OtpPurpose, OtpType } from "@prisma/client";
 import { PrismaService } from "@modules/prisma/prisma.service";
 import { NotificationService } from "@modules/notification/notification.service";
 import { expiryDate } from "@utils/general.util";
 import { EnvService } from "@modules/env/env.service";
-import crypto from "crypto";
 import { LoggerService } from "@modules/logger/logger.service";
 import { InjectLogger } from "@decorators/logger.decorator";
+import { CacheService } from "@modules/cache/cache.service";
+import type { TemplateProps } from "@templates/notification.templates";
 
 interface SendOtpPayload {
   userId: string;
@@ -14,7 +15,7 @@ interface SendOtpPayload {
   purpose: OtpPurpose;
   type?: OtpType;
   notify?: boolean;
-  metadata?: Record<string, any>;
+  metadata: TemplateProps;
 }
 
 interface verifyOtpPayload {
@@ -32,7 +33,8 @@ export class OtpService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifyService: NotificationService,
-    private readonly env: EnvService
+    private readonly env: EnvService,
+    private readonly cache: CacheService
   ) {}
 
   async sendOtp({
@@ -65,21 +67,15 @@ export class OtpService {
       });
     }
 
-    this.logger.log(`🔢 OTP generated`, {
-      userId,
-      purpose,
-      type,
-      expiresAt: otp.expiresAt,
-      context: OtpService.name,
-    });
-
     if (!notify) return otp;
+
+    const clientUrl = (await this.cache.get("clientUrl")) as string;
 
     await this.notifyService.sendNotification({
       userId: userId,
       purpose,
       to: identifier,
-      metadata: { otp, identifier, ...metadata },
+      metadata: { otp, identifier, ...metadata, clientUrl },
     });
 
     return otp;
@@ -109,12 +105,6 @@ export class OtpService {
     await this.prisma.otp.update({
       where: { id: otp.id },
       data: { usedAt: new Date() },
-    });
-
-    this.logger.log(`✅ OTP verified`, {
-      userId,
-      purpose,
-      context: OtpService.name,
     });
 
     return otp;

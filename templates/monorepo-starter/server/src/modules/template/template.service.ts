@@ -1,15 +1,12 @@
 import { Injectable } from "@nestjs/common";
-import { EnvService } from "@modules//env/env.service";
-
+import type { TemplateProps } from "@templates/notification.templates";
 import * as templates from "@templates/notification.templates";
 
 @Injectable()
 export class TemplateService {
-  constructor(private readonly env: EnvService) {}
-
   private readonly templateFactory: Record<
     NotificationPurpose,
-    (data: any, env: EnvService) => TemplateReturn
+    (data: TemplateProps) => TemplateReturn
   > = {
     signin: templates.signinTemplate,
     signup: templates.signupTemplate,
@@ -22,12 +19,15 @@ export class TemplateService {
     disableMfa: templates.disableMfaTemplate,
   };
 
-  resolveTemplate(purpose: NotificationPurpose, metadata: any): TemplateReturn {
+  resolveTemplate(
+    purpose: NotificationPurpose,
+    metadata: TemplateProps
+  ): TemplateReturn {
     const templateFn = this.templateFactory[purpose];
     if (!templateFn) {
       throw new Error(`Undefined template purpose: ${purpose}`);
     }
 
-    return templateFn(metadata, this.env);
+    return templateFn(metadata);
   }
 }

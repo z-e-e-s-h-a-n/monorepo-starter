@@ -1,7 +1,6 @@
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "@/app.module";
 import cookieParser from "cookie-parser";
-import { GlobalValidationPipe } from "@pipes/validation.pipe";
 import { AllExceptionsFilter } from "@filters/exceptions.filter";
 import { ResponseInterceptor } from "@/lib/interceptors/response.interceptor";
 import { EnvService } from "@modules/env/env.service";
@@ -20,11 +19,17 @@ async function bootstrap() {
   const port = env.get("APP_PORT");
   const endpoint = env.get("APP_ENDPOINT");
   const nodeEnv = env.get("NODE_ENV");
+  const allowedOrigins = env.get("CORS_ORIGIN");
 
+  app.enableCors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-client-url"],
+  });
   app.use(cookieParser());
   app.useGlobalInterceptors(app.get(ResponseInterceptor));
   app.useGlobalFilters(app.get(AllExceptionsFilter));
-  app.useGlobalPipes(GlobalValidationPipe);
   await app.listen(port);
 
   logger.log("==========================================");

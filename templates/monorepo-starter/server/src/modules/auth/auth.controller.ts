@@ -7,7 +7,7 @@ import {
   SignInDto,
   SignUpDto,
   ValidateOtpDto,
-} from "@dto/auth.dto";
+} from "@workspace/contracts/auth";
 import type { Request, Response } from "express";
 import { Public } from "@decorators/public.decorator";
 
@@ -70,5 +70,10 @@ export class AuthController {
   @Get("change-identifier")
   async verifyIdentifier(@Query() dto: ChangeIdentifierDto) {
     return this.authService.changeIdentifier(dto);
+  }
+
+  @Get("/me")
+  async getUser(@Req() req: Request) {
+    return this.authService.getUser(req);
   }
 }

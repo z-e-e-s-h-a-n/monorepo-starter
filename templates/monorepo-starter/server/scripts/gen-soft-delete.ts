@@ -47,6 +47,6 @@ ${softDeleteModels.map((m) => `  "${m}"`).join(",\n")}
 fs.writeFileSync(OUTPUT_PATH, output, "utf8");
 
 console.log(
-  `✅ Generated soft delete models (${softDeleteModels.length}/${totalModels} models):`,
-  softDeleteModels.join(", ")
+  `✅ Generated soft delete models (${softDeleteModels.length}/${totalModels} models):`
 );
+console.log(softDeleteModels.join("  -  "));

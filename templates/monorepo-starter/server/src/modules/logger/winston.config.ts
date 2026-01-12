@@ -1,7 +1,7 @@
 import * as winston from "winston";
 import "winston-daily-rotate-file";
 import { utilities } from "nest-winston";
-import { appName } from "@/lib/constants/app";
+import { appName } from "@constants/app";
 
 const isProduction = process.env.NODE_ENV === "production";
 

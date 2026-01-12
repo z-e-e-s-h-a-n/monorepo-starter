@@ -17,6 +17,7 @@ export class ResponseInterceptor implements NestInterceptor {
           return res;
         }
 
+        const action = res.action;
         const statusCode = response.statusCode;
         const { data = null, message = "Success", ...meta } = res || {};
 
@@ -25,6 +26,7 @@ export class ResponseInterceptor implements NestInterceptor {
           success: statusCode >= 200 && statusCode < 300,
           message,
           data,
+          action,
           ...(Object.keys(meta).length ? { meta } : {}),
         };
       })

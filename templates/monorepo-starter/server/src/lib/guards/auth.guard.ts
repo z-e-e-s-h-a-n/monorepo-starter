@@ -77,11 +77,6 @@ export class AuthGuard implements CanActivate {
 
         if (!req["user"]) throw new UnauthorizedException("User not found");
 
-        this.logger.log(`✅ Auth success`, {
-          userId: req.user?.id,
-          method: req.method,
-        });
-
         return true;
       } catch (err) {
         if (err instanceof UnauthorizedException) throw err;

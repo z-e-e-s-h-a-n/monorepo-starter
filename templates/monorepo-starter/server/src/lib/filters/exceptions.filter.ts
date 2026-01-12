@@ -8,6 +8,9 @@ import {
   type ArgumentsHost,
 } from "@nestjs/common";
 import { InjectLogger } from "@decorators/logger.decorator";
+import { Prisma } from "@generated/prisma";
+import { ZodError } from "zod";
+import { ZodValidationException } from "nestjs-zod";
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -19,32 +22,87 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const req = ctx.getRequest<Request>();
     const res = ctx.getResponse<Response>();
 
-    const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    let message = "Internal server error";
+    let data: any = null;
+    let action: string | undefined;
 
-    let message: any = "Internal server error";
+    // ---------- Prisma errors ----------
+    if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+      switch (exception.code) {
+        case "P2002":
+          status = HttpStatus.CONFLICT;
+          message = "Duplicate resource detected";
+          break;
+        case "P2003":
+          status = HttpStatus.BAD_REQUEST;
+          message = "Invalid reference or relation not found";
+          break;
+        case "P2025":
+          status = HttpStatus.NOT_FOUND;
+          message = "Resource not found";
+          break;
+        case "P2016":
+          status = HttpStatus.BAD_REQUEST;
+          message = "Invalid query";
+          break;
+        default:
+          message = "Database error";
+      }
+    }
 
-    if (exception instanceof HttpException) {
-      const res = exception.getResponse();
+    // ---------- Zod validation errors ----------
+    else if (
+      exception instanceof ZodValidationException ||
+      exception instanceof ZodError
+    ) {
+      status = HttpStatus.BAD_REQUEST;
 
-      if (
-        res &&
-        typeof res === "object" &&
-        "message" in res &&
-        Array.isArray((res as any).message)
-      ) {
-        message = (res as any).message;
-      } else if (typeof res === "string") {
-        message = res;
-      } else if (typeof exception.message === "string") {
+      const zodError = (
+        exception instanceof ZodValidationException
+          ? exception.getZodError()
+          : exception
+      ) as ZodError;
+
+      data = zodError.issues.map((issue) => ({
+        field: issue.path.join("."),
+        message: issue.message,
+        code: issue.code,
+      }));
+
+      message = "Validation failed";
+    }
+
+    // ---------- NestJS HttpException ----------
+    else if (exception instanceof HttpException) {
+      status = exception.getStatus();
+      const response = exception.getResponse();
+
+      if (typeof response === "object" && response !== null) {
+        const resObj = response as any;
+
+        if (Array.isArray(resObj.message)) {
+          message = resObj.message.join(", ");
+        } else if (typeof resObj.message === "string") {
+          message = resObj.message;
+        } else {
+          message = "Request failed";
+        }
+
+        action = resObj.action;
+        data = resObj.data ?? null;
+      } else {
         message = exception.message;
       }
     }
-    // if (response.headersSent) return;
 
-    this.logger.error(`❌ Exception caught`, {
+    // ---------- Other runtime errors ----------
+    else if (exception instanceof Error) {
+      message = exception.message || message;
+    }
+
+    // ---------- Logging ----------
+    this.logger.error("❌ Exception caught", {
       message: exception.message,
       stack: exception.stack,
       status,
@@ -52,11 +110,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
       method: req.method,
     });
 
+    // ---------- Response ----------
     res.status(status).json({
       status,
-      data: null,
-      message,
       success: false,
+      message,
+      data,
+      action,
     });
   }
 }

@@ -10,4 +10,10 @@ declare global {
     html: string;
     text: string;
   };
+
+  export const CACHE_KEYS = {
+    CLIENT_URL: "clientUrl",
+  } as const;
+
+  export type CacheKeys = (typeof CACHE_KEYS)[keyof typeof CACHE_KEYS];
 }

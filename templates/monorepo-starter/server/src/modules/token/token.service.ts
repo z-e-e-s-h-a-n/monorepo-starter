@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { expiryDate } from "@utils/general.util";
 import { PrismaService } from "@modules/prisma/prisma.service";
-import { UserRole } from "@generated/prisma";
+import type { UserRole } from "@generated/prisma";
 import { EnvService } from "@modules/env/env.service";
 import type { Request, Response } from "express";
 import { CookieService } from "@utils/cookie.util";
@@ -39,7 +39,7 @@ export class TokenService {
       }),
     ]);
 
-    const tokenId = req.cookies["tokenId"] || "undefined";
+    const tokenId = req.cookies["tokenId"] ?? "undefined";
     const refreshExp = expiryDate(this.env.get("REFRESH_TOKEN_EXP"), true);
 
     const tokenData = {
@@ -49,7 +49,6 @@ export class TokenService {
       userAgent: req.headers["user-agent"] || "Unknown User Agent",
       lastUsed: new Date(),
       blacklisted: false,
-      isActive: true,
       expiresAt: refreshExp,
     };
 
