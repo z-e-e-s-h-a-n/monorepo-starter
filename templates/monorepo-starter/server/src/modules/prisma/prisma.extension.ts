@@ -94,7 +94,7 @@ export const softDeleteExtension = Prisma.defineExtension((client) =>
         },
       },
     },
-  })
+  }),
 );
 
 export type ExtendedPrismaClient = ReturnType<typeof softDeleteExtension>;

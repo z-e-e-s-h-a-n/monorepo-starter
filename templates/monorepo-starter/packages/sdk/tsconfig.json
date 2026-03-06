@@ -1,13 +1,12 @@
 {
-  "extends": "@workspace/config/typescript/base",
+  "extends": "@workspace/config/typescript/node",
   "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "baseUrl": ".",
-    "outDir": "dist",
-    "rootDir": ".",
     "paths": {
       "@workspace/sdk/*": ["src/*"]
-    },
-   },
-  "include": [".", "../../packages/contracts/src/**/*.d.ts"],
+    }
+  },
+  "include": [".", "../contracts/src/**/*types.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

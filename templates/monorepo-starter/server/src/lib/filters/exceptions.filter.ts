@@ -1,4 +1,5 @@
-import { LoggerService } from "@modules/logger/logger.service";
+import { ZodError } from "zod";
+import { ZodValidationException } from "nestjs-zod";
 import type { Request, Response } from "express";
 import {
   Catch,
@@ -7,10 +8,10 @@ import {
   type ExceptionFilter,
   type ArgumentsHost,
 } from "@nestjs/common";
-import { InjectLogger } from "@decorators/logger.decorator";
 import { Prisma } from "@generated/prisma";
-import { ZodError } from "zod";
-import { ZodValidationException } from "nestjs-zod";
+
+import { InjectLogger } from "@/decorators/logger.decorator";
+import { LoggerService } from "@/modules/logger/logger.service";
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -24,30 +25,132 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = "Internal server error";
-    let data: any = null;
-    let action: string | undefined;
+    let action: string | undefined = undefined;
+    let errorCode: string | undefined = undefined;
+    let meta: Record<string, any> | undefined = undefined;
 
-    // ---------- Prisma errors ----------
-    if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+    // ---------- NestJS HttpException ----------
+    if (exception instanceof HttpException) {
+      status = exception.getStatus();
+      const response = exception.getResponse();
+
+      if (typeof response === "object" && response !== null) {
+        const resObj = response as any;
+
+        if (Array.isArray(resObj.message)) {
+          message = resObj.message.join(", ");
+        } else if (typeof resObj.message === "string") {
+          message = resObj.message;
+        } else {
+          message = "Request failed";
+        }
+
+        action = resObj.action;
+        meta = resObj.meta;
+        errorCode = resObj.errorCode;
+      } else {
+        message = exception.message;
+      }
+    }
+
+    // -------- Prisma ClientKnownRequestError --------
+    else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       switch (exception.code) {
-        case "P2002":
-          status = HttpStatus.CONFLICT;
-          message = "Duplicate resource detected";
+        case "P2002": {
+          status = 409;
+          const target = Array.isArray(exception.meta?.target)
+            ? exception.meta?.target.join(", ")
+            : String(exception.meta?.target ?? "");
+          message = `Duplicate entry${target ? `: ${target}` : ""}`;
           break;
+        }
+        case "P2025": {
+          status = 404;
+
+          const model =
+            typeof exception.meta?.modelName === "string"
+              ? exception.meta.modelName
+              : "Resource";
+
+          message = `${model} not found`;
+          break;
+        }
         case "P2003":
-          status = HttpStatus.BAD_REQUEST;
-          message = "Invalid reference or relation not found";
-          break;
-        case "P2025":
-          status = HttpStatus.NOT_FOUND;
-          message = "Resource not found";
+          status = 400;
+          message = "Foreign key constraint failed";
           break;
         case "P2016":
-          status = HttpStatus.BAD_REQUEST;
-          message = "Invalid query";
+          status = 400;
+          message = "Query interpretation error";
+          break;
+        case "P2011":
+          status = 400;
+          message = "Null constraint violation";
+          break;
+        case "P2012":
+          status = 400;
+          message = "Missing required value";
+          break;
+        case "P2014":
+          status = 400;
+          message = "Invalid relation operation";
+          break;
+        case "P2001":
+          status = 404;
+          message = "Record does not exist";
           break;
         default:
-          message = "Database error";
+          status = 400;
+          message = "Database operation failed";
+      }
+    }
+
+    // -------- Prisma Validation Error --------
+    else if (exception instanceof Prisma.PrismaClientValidationError) {
+      status = 400;
+      const errorMessage = exception.message;
+
+      if (errorMessage.includes("Unknown argument")) {
+        const match = errorMessage.match(/Unknown argument `(\w+)`/);
+        if (match) {
+          message = `Invalid field: ${match[1]} is not a valid field for this operation`;
+        } else {
+          message = "Invalid data provided for database operation";
+        }
+      } else if (errorMessage.includes("Invalid value")) {
+        message = "Invalid data format provided";
+      } else {
+        message = "Database validation failed";
+      }
+    }
+
+    // -------- Prisma Unknown Request Error --------
+    else if (exception instanceof Prisma.PrismaClientUnknownRequestError) {
+      status = 400;
+      message = "Database request error";
+
+      if (process.env.NODE_ENV === "development") {
+        meta = { detail: exception.message };
+      }
+    }
+
+    // -------- Prisma Initialization Error --------
+    else if (exception instanceof Prisma.PrismaClientInitializationError) {
+      status = 500;
+      message = "Database connection failed";
+
+      if (process.env.NODE_ENV === "development") {
+        meta = { detail: exception.message };
+      }
+    }
+
+    // -------- Prisma Rust Panic Error --------
+    else if (exception instanceof Prisma.PrismaClientRustPanicError) {
+      status = 500;
+      message = "Database engine error";
+
+      if (process.env.NODE_ENV === "development") {
+        meta = { detail: exception.message };
       }
     }
 
@@ -64,36 +167,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
           : exception
       ) as ZodError;
 
-      data = zodError.issues.map((issue) => ({
+      meta = zodError.issues.map((issue) => ({
         field: issue.path.join("."),
         message: issue.message,
-        code: issue.code,
+        errorCode: issue.code,
       }));
 
+      console.log("meta", meta);
+
       message = "Validation failed";
-    }
-
-    // ---------- NestJS HttpException ----------
-    else if (exception instanceof HttpException) {
-      status = exception.getStatus();
-      const response = exception.getResponse();
-
-      if (typeof response === "object" && response !== null) {
-        const resObj = response as any;
-
-        if (Array.isArray(resObj.message)) {
-          message = resObj.message.join(", ");
-        } else if (typeof resObj.message === "string") {
-          message = resObj.message;
-        } else {
-          message = "Request failed";
-        }
-
-        action = resObj.action;
-        data = resObj.data ?? null;
-      } else {
-        message = exception.message;
-      }
     }
 
     // ---------- Other runtime errors ----------
@@ -108,6 +190,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status,
       path: req.url,
       method: req.method,
+      errorCode,
+      meta,
     });
 
     // ---------- Response ----------
@@ -115,8 +199,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status,
       success: false,
       message,
-      data,
       action,
+      meta,
+      errorCode,
     });
   }
 }

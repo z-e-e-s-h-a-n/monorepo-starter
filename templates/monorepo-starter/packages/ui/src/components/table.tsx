@@ -4,11 +4,15 @@ import * as React from "react";
 
 import { cn } from "@workspace/ui/lib/utils";
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+interface TableProps extends React.ComponentProps<"table"> {
+  wrapperCn?: string;
+}
+
+function Table({ className, wrapperCn, ...props }: TableProps) {
   return (
     <div
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      className={cn("relative w-full overflow-x-auto", wrapperCn)}
     >
       <table
         data-slot="table"

@@ -20,18 +20,25 @@ export const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),
+
   APP_PORT: z.coerce.number(),
   APP_ENDPOINT: z.string(),
   CLIENT_ENDPOINT: z.string(),
   ADMIN_ENDPOINT: z.string(),
+
   CORS_ORIGIN: z
     .string()
     .transform((val) => val.split(",").map((origin) => origin.trim())),
 
   // ==============================
-  // Database
+  // Database / Cloud
   // ==============================
   DB_URI: z.string(),
+
+  CLOUDINARY_CLOUD_NAME: z.string(),
+  CLOUDINARY_API_KEY: z.string(),
+  CLOUDINARY_API_SECRET: z.string(),
+  CLOUDINARY_URL: z.string(),
 
   // ==============================
   // OTP Model
@@ -63,6 +70,7 @@ export const envSchema = z.object({
   TWILIO_ACCOUNT_SID: z.string(),
   TWILIO_AUTH_TOKEN: z.string(),
   TWILIO_PHONE_NUMBER: z.string(),
+  TWILIO_WHATSAPP_NUMBER: z.string(),
 
   // ==============================
   // Email (Resend)
@@ -71,6 +79,15 @@ export const envSchema = z.object({
   SMTP_PORT: z.coerce.number(),
   SMTP_USER: z.string(),
   SMTP_PASS: z.string(),
+
+  // ==============================
+  // Firebase
+  // ==============================
+  FIREBASE_PROJECT_ID: z.string(),
+  FIREBASE_CLIENT_EMAIL: z.string(),
+  FIREBASE_PRIVATE_KEY: z
+    .string()
+    .transform((key) => key.replace(/\\n/g, "\n")),
 
   // ==============================
   // API Keys
@@ -87,10 +104,11 @@ export const envSchema = z.object({
 
 export function validateEnv(config: Record<string, any>) {
   const parsed = envSchema.safeParse(config);
+
   if (!parsed.success) {
     console.error(
       "❌ Invalid environment variables:",
-      parsed.error.flatten().fieldErrors
+      z.flattenError(parsed.error).fieldErrors,
     );
     throw new Error("Invalid environment variables");
   }

@@ -1,14 +1,66 @@
+"use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { ApiResponse } from "@workspace/sdk/lib/types";
-import { parseExpiry } from "@workspace/ui/lib/utils";
+import type { ApiException, ApiSuccess } from "@workspace/sdk";
+import { parseDuration } from "@workspace/shared/utils";
 
 /* -------------------------------------------
  * Helpers
  * ------------------------------------------- */
-type ApiFn = (...args: any[]) => Promise<ApiResponse<any>>;
-type ExtractData<T extends ApiFn> = Awaited<ReturnType<T>>["data"];
 
-const STALE_TIME = parseExpiry("1h");
+type ApiFn<T = any> = (...args: any[]) => Promise<ApiSuccess<T>>;
+type ExtractData<T extends ApiFn> = Awaited<ReturnType<T>>["data"];
+// type ExtractParams<T extends ApiFn> = Parameters<T>;
+
+const STALE_TIME = parseDuration("1h");
+
+/* -------------------------------------------
+ * Return Type Helpers
+ * ------------------------------------------- */
+
+export type EntityHookReturn<TData> = {
+  data: TData | undefined;
+  isLoading: boolean;
+  isFetching: boolean;
+  fetchError: ApiException | null;
+  mutateAsync: (data: any) => Promise<TData>;
+  isPending: boolean;
+  mutateError: ApiException | null;
+};
+
+export type EntitiesHookReturn<TData> = {
+  data: TData | undefined;
+  isLoading: boolean;
+  isFetching: boolean;
+  fetchError: ApiException | null;
+};
+
+export type CreateHookReturn<TData, TPayload> = {
+  createAsync: (data: TPayload) => Promise<TData>;
+  isCreating: boolean;
+  createError: ApiException | null;
+};
+
+export type UpdateHookReturn<TData, TPayload> = {
+  updateAsync: (data: TPayload) => Promise<TData>;
+  isUpdating: boolean;
+  updateError: ApiException | null;
+};
+
+export type DeleteHookReturn = {
+  deleteAsync: (params: {
+    id: string;
+    force?: boolean;
+  }) => Promise<ApiSuccess<null>>;
+  isDeleting: boolean;
+  deleteError: ApiException | null;
+};
+
+export type RestoreHookReturn = {
+  restoreAsync: (...args: any[]) => Promise<any>;
+  isRestoring: boolean;
+  restoreError: ApiException | null;
+};
 
 /* -------------------------------------------
  * CRUD Factory
@@ -17,72 +69,89 @@ export const createCrudHooks = <
   TFindOne extends ApiFn,
   TFindAll extends ApiFn,
   TCreate extends ApiFn,
-  TUpdate extends ApiFn,
-  TRemove extends ApiFn,
-  TRestore extends ApiFn,
+  TUpdate extends ApiFn | undefined,
+  TDelete extends ApiFn | undefined,
+  TRestore extends ApiFn | undefined,
 >(
   api: {
     findOne: TFindOne;
     findAll: TFindAll;
     create: TCreate;
-    update: TUpdate;
-    remove: TRemove;
-    restore: TRestore;
+    update?: TUpdate;
+    delete?: TDelete;
+    restore?: TRestore;
   },
-  keys: {
-    single: string;
-    list: string;
-  }
+  keys: { single: string; list: string },
 ) => {
   type SingleData = ExtractData<TFindOne>;
   type ListData = ExtractData<TFindAll>;
-  type CreateUpdatePayload = Parameters<TCreate>[0];
+  type CreatePayload = Parameters<TCreate>[0];
+  type UpdatePayload = TUpdate extends ApiFn ? Parameters<TUpdate>[1] : never;
+  type FindOneParams = Parameters<TFindOne>;
+  type FindAllParams = Parameters<TFindAll>;
 
   /* =========================================================
    * SINGLE (create / update / find one)
    * ======================================================= */
-  const useEntity = (id?: string) => {
+  const useEntity = (...args: FindOneParams): EntityHookReturn<SingleData> => {
     const queryClient = useQueryClient();
+    const { findOne, create, update } = api;
 
-    const query = useQuery({
-      queryKey: [keys.single, id],
-      queryFn: () => api.findOne(id!),
+    const id = args[0];
+
+    const query = useQuery<SingleData, ApiException>({
+      queryKey: [keys.single, ...args],
+      queryFn: () => findOne(...args),
       enabled: !!id,
-      select: (res) => res.data as SingleData,
+      select: (res) => res.data,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       staleTime: STALE_TIME,
       gcTime: STALE_TIME,
     });
 
-    const mutation = useMutation({
-      mutationFn: (data: CreateUpdatePayload) =>
-        id ? api.update(id, data) : api.create(data),
-      onSuccess: (res) => {
-        queryClient.invalidateQueries({ queryKey: [keys.list] });
-
+    const mutation = useMutation<
+      SingleData,
+      ApiException,
+      CreatePayload | UpdatePayload
+    >({
+      mutationFn: (data) => {
         if (id) {
-          queryClient.setQueryData([keys.single, id], res.data);
+          if (!update) throw new Error("Update function missing.");
+          return update(id, data as UpdatePayload);
         }
+        return create(data as CreatePayload);
+      },
+      onSuccess: () => {
+        if (id) {
+          queryClient.invalidateQueries({ queryKey: [keys.single] });
+        }
+        queryClient.invalidateQueries({ queryKey: [keys.list] });
       },
     });
 
     return {
       data: query.data,
-      isLoading: query.isLoading || mutation.isPending,
+      isLoading: query.isLoading,
       isFetching: query.isFetching,
-      error: query.error,
+      fetchError: query.error,
       mutateAsync: mutation.mutateAsync,
+      isPending: mutation.isPending,
+      mutateError: mutation.error,
     };
   };
 
   /* =========================================================
    * LIST
    * ======================================================= */
-  const useEntities = (...args: Parameters<TFindAll>) => {
-    const query = useQuery({
+  const useEntities = (
+    ...args: FindAllParams
+  ): EntitiesHookReturn<ListData> => {
+    const { findAll } = api;
+
+    const query = useQuery<ListData, ApiException>({
       queryKey: [keys.list, ...args],
-      queryFn: () => api.findAll(...args),
+      queryFn: () => findAll(...args),
       select: (res) => res.data as ListData,
       placeholderData: (prev) => prev,
       refetchOnWindowFocus: false,
@@ -95,49 +164,112 @@ export const createCrudHooks = <
       data: query.data,
       isLoading: query.isLoading,
       isFetching: query.isFetching,
-      error: query.error,
+      fetchError: query.error,
     };
   };
 
   /* =========================================================
-   * REMOVE
+   * CREATE
    * ======================================================= */
-  const useRemoveEntity = () => {
+  const useCreateEntity = (): CreateHookReturn<SingleData, CreatePayload> => {
     const queryClient = useQueryClient();
+    const { create } = api;
 
-    const mutation = useMutation({
-      mutationFn: ({ id, force }: { id: string; force?: boolean }) =>
-        api.remove(id, force),
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: [keys.list] }),
+    const mutation = useMutation<SingleData, ApiException, CreatePayload>({
+      mutationFn: create,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [keys.list] });
+      },
     });
 
     return {
-      remove: mutation.mutateAsync,
-      isRemoving: mutation.isPending,
+      createAsync: mutation.mutateAsync,
+      isCreating: mutation.isPending,
+      createError: mutation.error,
+    };
+  };
+
+  /* =========================================================
+   * UPDATE
+   * ======================================================= */
+
+  const useUpdateEntity = (
+    id: string,
+  ): UpdateHookReturn<SingleData, UpdatePayload> => {
+    const queryClient = useQueryClient();
+    const { update } = api;
+
+    if (!update) throw new Error("Update function missing.");
+
+    const mutation = useMutation<SingleData, ApiException, UpdatePayload>({
+      mutationFn: (data) => update(id, data),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [keys.single] });
+        queryClient.invalidateQueries({ queryKey: [keys.list] });
+      },
+    });
+
+    return {
+      updateAsync: mutation.mutateAsync,
+      isUpdating: mutation.isPending,
+      updateError: mutation.error,
+    };
+  };
+
+  /* =========================================================
+   * Delete
+   * ======================================================= */
+  const useDeleteEntity = (): DeleteHookReturn => {
+    const queryClient = useQueryClient();
+    const { delete: d } = api;
+
+    if (!d) throw new Error("Delete function missing.");
+
+    const mutation = useMutation<
+      ApiSuccess<null>,
+      ApiException,
+      { id: string; force?: boolean }
+    >({
+      mutationFn: ({ id, force }) => d(id, force),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [keys.list] });
+      },
+    });
+
+    return {
+      deleteAsync: mutation.mutateAsync,
+      isDeleting: mutation.isPending,
+      deleteError: mutation.error,
     };
   };
 
   /* =========================================================
    * RESTORE
    * ======================================================= */
-  const useRestoreEntity = () => {
+  const useRestoreEntity = (): RestoreHookReturn => {
     const queryClient = useQueryClient();
+    const { restore } = api;
 
-    const mutation = useMutation({
-      mutationFn: (id: string) => api.restore(id),
+    if (!restore) throw new Error("Restore function missing.");
+
+    const mutation = useMutation<ApiSuccess<null>, ApiException>({
+      mutationFn: restore,
       onSuccess: () => queryClient.invalidateQueries({ queryKey: [keys.list] }),
     });
 
     return {
-      restore: mutation.mutateAsync,
+      restoreAsync: mutation.mutateAsync,
       isRestoring: mutation.isPending,
+      restoreError: mutation.error,
     };
   };
 
   return {
     useEntity,
     useEntities,
-    useRemoveEntity,
+    useCreateEntity,
+    useUpdateEntity,
+    useDeleteEntity,
     useRestoreEntity,
   };
 };

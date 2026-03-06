@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Button } from "./button";
 import {
   AlertDialog,
@@ -14,13 +15,16 @@ import { LoaderCircle } from "lucide-react";
 import { requestOtp, validateOtp } from "@workspace/sdk/auth";
 import { useRouter } from "next/navigation";
 
-interface OtpModalProps {
-  identifier: string;
-  purpose: OtpPurpose;
+export interface OtpMeta {
+  token?: string;
+  valid?: boolean;
+}
+
+interface OtpModalProps extends RequestOtpType {
   open: boolean;
   setOpen: (o: boolean) => void;
-  setOtpToken: (t: string | null) => void;
-  redirectUrl: string | null;
+  setOtpMeta: (m?: OtpMeta) => void;
+  redirectUrl?: string;
 }
 
 const OtpModal = ({
@@ -28,7 +32,7 @@ const OtpModal = ({
   purpose,
   open,
   setOpen,
-  setOtpToken,
+  setOtpMeta,
   redirectUrl,
 }: OtpModalProps) => {
   const [secret, setSecret] = useState("");
@@ -40,7 +44,8 @@ const OtpModal = ({
     try {
       const res = await validateOtp({ identifier, purpose, secret });
       toast.success(res.message);
-      setOtpToken(res.data?.secret ?? null);
+
+      setOtpMeta({ valid: true, token: res.meta?.secret });
       setOpen(false);
       if (redirectUrl) router.push(redirectUrl);
     } catch (err: any) {
@@ -50,6 +55,7 @@ const OtpModal = ({
       });
     } finally {
       setIsLoading(false);
+      setSecret("");
     }
   };
 
@@ -71,28 +77,26 @@ const OtpModal = ({
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogContent className="flex flex-col items-center gap-8 py-10! px-8! rounded-4xl">
-        <AlertDialogHeader className="w-full">
+      <AlertDialogContent className="space-y-6 rounded-4xl">
+        <AlertDialogHeader className="flex flex-col items-center">
           <AlertDialogTitle>Enter You OTP</AlertDialogTitle>
           <AlertDialogDescription>
-            We've sent a code to{" "}
-            <span className="text-primary">
-              {identifier || "mzeeshanff10@gmail.com"}
-            </span>
-            .
+            We&apos;ve sent a code to{" "}
+            <span className="text-primary">{identifier}</span>.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <InputOTP maxLength={6} value={secret} onChange={setSecret}>
           <InputOTPGroup className="flex w-full justify-between gap-2 sm:gap-4!">
             {Array.from({ length: 6 }).map((_, i) => (
               <InputOTPSlot
+                key={i}
                 index={i}
-                className="flex-center size-12 gap-5 rounded-xl! border-border/50 text-3xl font-medium text-primary shadow-drop-1 md:size-16"
+                className="flex-center size-12 gap-5 rounded-xl! border-border/50 text-3xl font-medium text-primary shadow-drop-1 md:size-16!"
               />
             ))}
           </InputOTPGroup>
         </InputOTP>
-        <AlertDialogFooter className="flex-col w-full gap-4">
+        <AlertDialogFooter className="flex-col! w-full gap-4">
           <Button
             disabled={isLoading || secret.length !== 6}
             onClick={handleSubmit}
@@ -103,13 +107,14 @@ const OtpModal = ({
             {isLoading && <LoaderCircle className="animate-spin" />}
           </Button>
           <AlertDialogDescription className="flex-center gap-1">
-            Didn't get a code?
-            <span
+            Didn&apos;t get a code?
+            <button
               className="text-sm text-primary cursor-pointer"
               onClick={handleResendOTP}
+              disabled={isLoading}
             >
               Resend OTP
-            </span>
+            </button>
           </AlertDialogDescription>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -1,7 +1,8 @@
-import { Injectable } from "@nestjs/common";
-import { LoggerService } from "@modules/logger/logger.service";
 import type { Request } from "express";
-import { InjectLogger } from "@decorators/logger.decorator";
+import { Injectable } from "@nestjs/common";
+
+import { InjectLogger } from "@/decorators/logger.decorator";
+import { LoggerService } from "@/modules/logger/logger.service";
 
 @Injectable()
 export class PublicService {
@@ -12,7 +13,7 @@ export class PublicService {
     const origin = `${req.protocol}://${req.get("host")}`;
 
     this.logger.log(
-      `Welcome endpoint hit from IP: ${req.ip}, path: ${origin}${req.url}`
+      `Welcome endpoint hit from IP: ${req.ip}, path: ${origin}${req.url}`,
     );
     return { message: "Server is running 🚀" };
   }

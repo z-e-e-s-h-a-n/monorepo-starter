@@ -1,7 +1,6 @@
 import { redirectToOAuth } from "@workspace/sdk/auth";
 import { Button } from "@workspace/ui/components/button";
 import { FieldSeparator } from "@workspace/ui/components/field";
-import React from "react";
 
 const SocialAuthField = () => {
   return (
@@ -13,7 +12,7 @@ const SocialAuthField = () => {
         <Button
           variant="outline"
           type="button"
-          onClick={() => redirectToOAuth(window, "apple")}
+          onClick={() => redirectToOAuth("apple")}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
             <path
@@ -26,7 +25,7 @@ const SocialAuthField = () => {
         <Button
           variant="outline"
           type="button"
-          onClick={() => redirectToOAuth(window, "google")}
+          onClick={() => redirectToOAuth("google")}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
             <path
@@ -39,7 +38,7 @@ const SocialAuthField = () => {
         <Button
           variant="outline"
           type="button"
-          onClick={() => redirectToOAuth(window, "facebook")}
+          onClick={() => redirectToOAuth("facebook")}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
             <path

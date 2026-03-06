@@ -1,39 +1,22 @@
 "use client";
-import AppSidebar from "@/components/AppSidebar";
-import Header from "@/components/Header";
-import useAuth from "@/hooks/auth";
-import { requiredRoles } from "@/lib/constants";
+import { redirect } from "next/navigation";
 import {
   SidebarInset,
   SidebarProvider,
 } from "@workspace/ui/components/sidebar";
-import { Loader } from "lucide-react";
-import { redirect } from "next/navigation";
-import { toast } from "sonner";
+
+import { useAuth } from "@/hooks/auth";
+import Header from "@/components/layout/Header";
+import AppSidebar from "@/components/layout/AppSidebar";
+import RootLayoutSkeleton from "@/components/skeleton/RootLayoutSkeleton";
 
 const Layout = ({ children }: AppLayoutProps) => {
-  const { isLoading, isError, currentUser } = useAuth();
+  const { isLoading, isSuccess, error } = useAuth();
 
-  if (isLoading)
-    return (
-      <div>
-        <Loader /> Loading .....
-      </div>
-    );
-  if (isError || !currentUser) {
-    toast.error("please login to manage dashboard.");
-    return redirect("/auth/sign-in");
-  }
+  if (isLoading) return <RootLayoutSkeleton />;
 
-  const hasRole = requiredRoles.some((role) =>
-    currentUser.roles.includes(role)
-  );
-
-  if (!hasRole) {
-    toast(`Forbidden: Requires ${requiredRoles.join(", ")} access.`, {
-      description: "login with admin account instead.",
-    });
-    return redirect("/auth/sign-in");
+  if (!isSuccess) {
+    redirect(`/auth/sign-in?error=${error.errorCode}&message=${error.message}`);
   }
 
   return (

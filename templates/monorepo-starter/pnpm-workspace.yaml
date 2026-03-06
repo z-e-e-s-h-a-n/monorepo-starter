@@ -1,18 +1,4 @@
 packages:
-  - "apps/*"
-  - "packages/*"
-  - "server"
-
-onlyBuiltDependencies:
-  - "@nestjs/core"
-  - "@swc/core"
-  - "@tailwindcss/oxide"
-  - "core-js-pure"
-  - "esbuild"
-  - "sharp"
-  - "unrs-resolver"
-  - "@prisma/client"
-  - "@prisma/engines"
-  - "prisma"
-  - argon2
-  - msw@2.12.7
+  - apps/*
+  - packages/*
+  - server

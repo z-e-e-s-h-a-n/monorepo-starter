@@ -1,16 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { cn } from "@workspace/ui/lib/utils";
-import { Button } from "@workspace/ui/components/button";
-import { Card, CardContent } from "@workspace/ui/components/card";
-import { FieldDescription } from "@workspace/ui/components/field";
-import { useForm, useStore } from "@tanstack/react-form";
-import { toast } from "sonner";
-import { signInSchema, signUpSchema } from "@workspace/contracts/auth";
-import { Form } from "@workspace/ui/components/form";
+import z from "zod";
 import Link from "next/link";
-import { GalleryVerticalEnd, LoaderCircle } from "lucide-react";
-import OtpModal from "@workspace/ui/components/otp-modal";
+import Image from "next/image";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useForm, useStore } from "@tanstack/react-form";
+import { GalleryVerticalEnd, LoaderCircle } from "lucide-react";
+
 import {
   requestOtp,
   resetPassword,
@@ -18,26 +16,51 @@ import {
   signUp,
   validateOtp,
 } from "@workspace/sdk/auth";
-import SocialAuthField from "./SocialAuthField";
-import { useRouter } from "next/navigation";
+
+import {
+  nameSchema,
+  passwordSchema,
+  identifierSchema,
+} from "@workspace/contracts";
+
+import { cn } from "@workspace/ui/lib/utils";
+import { Form } from "@workspace/ui/components/form";
+import { Button } from "@workspace/ui/components/button";
+import { Card, CardContent } from "@workspace/ui/components/card";
+import { FieldDescription } from "@workspace/ui/components/field";
 import { InputField } from "@workspace/ui/components/input-field";
+import OtpModal, { type OtpMeta } from "@workspace/ui/components/otp-modal";
+
+import SocialAuthField from "./SocialAuthField";
 
 interface AuthFormProps {
   formType: AuthFormType;
   className?: string;
-  otpQuery: ValidateOtpType;
+  queryParams: ValidateOtpType;
 }
 
-function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
-  let { identifier, purpose, secret, type } = otpQuery;
+function AuthForm({ className, formType, queryParams }: AuthFormProps) {
+  const { purpose, secret, type } = queryParams;
+  const [identifier, setIdentifier] = useState(queryParams.identifier);
   const [isOpen, setIsOpen] = useState(false);
-  const [otpToken, setOtpToken] = useState<string | null>(null);
+  const [otpMeta, setOtpMeta] = useState<OtpMeta>();
   const [isLoading, setIsLoading] = useState(false);
   const [otpPurpose, setOtpPurpose] = useState<OtpPurpose>(purpose);
-  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
+  const [redirectUrl, setRedirectUrl] = useState<string>();
 
   const router = useRouter();
-  const schema = formType === "sign-up" ? signUpSchema : signInSchema;
+  const schema = z.object({
+    identifier: identifierSchema,
+    ...(formType.includes("sign") && {
+      password: passwordSchema,
+    }),
+    ...(formType === "sign-up" && {
+      firstName: nameSchema,
+      lastName: nameSchema.optional(),
+    }),
+    ...(formType.includes("set-password") &&
+      otpMeta?.valid && { password: passwordSchema }),
+  });
 
   const form = useForm({
     defaultValues: {
@@ -46,7 +69,8 @@ function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
       confirmPassword: formType === "sign-up" ? "" : undefined,
       firstName: "",
       lastName: undefined,
-    } as SignUpType,
+      rememberDevice: true,
+    } as SignUpType & { confirmPassword?: string; rememberDevice?: boolean },
     validators: {
       onSubmit: schema as any,
     },
@@ -55,23 +79,25 @@ function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
       try {
         let message = `${formType} successfully!`;
         if (formType === "sign-up") {
-          setOtpPurpose("verifyIdentifier");
+          setOtpPurpose("authVerifyIdentifier");
           const res = await signUp(value);
           message = res.message;
-          setRedirectUrl("/");
+          setRedirectUrl("/auth/sign-in");
           setIsOpen(true);
         } else if (formType === "sign-in") {
           const res = await signIn(value);
           message = res.message;
-          setRedirectUrl("/");
+          setRedirectUrl("/dashboard");
           if (res.action === "verifyMfa") {
-            setOtpPurpose("verifyMfa");
+            setOtpPurpose("authVerifyMfa");
             setIsOpen(true);
           }
         } else if (formType.includes("password")) {
-          if (!otpToken) {
+          if (!otpMeta?.token) {
             const nextPurpose: OtpPurpose =
-              formType === "set-password" ? "setPassword" : "resetPassword";
+              formType === "set-password"
+                ? "authSetPassword"
+                : "authResetPassword";
             setOtpPurpose(nextPurpose);
             const res = await requestOtp({ identifier, purpose: nextPurpose });
             message = res.message;
@@ -80,7 +106,7 @@ function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
             const res = await resetPassword({
               identifier,
               purpose: otpPurpose,
-              secret: otpToken,
+              secret: otpMeta?.token,
               newPassword: value.password!,
             });
             message = res.message;
@@ -91,7 +117,7 @@ function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
       } catch (err: any) {
         console.log("err ......", err);
         if (err.action === "verifyIdentifier") {
-          setOtpPurpose("verifyIdentifier");
+          setOtpPurpose("authVerifyIdentifier");
           setRedirectUrl("/auth/sign-in");
           setIsOpen(true);
         }
@@ -104,6 +130,11 @@ function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
     },
   });
 
+  const formIdentifier = useStore(
+    form.store,
+    (state) => state.values.identifier,
+  );
+
   useEffect(() => {
     if (!secret) return;
 
@@ -115,7 +146,7 @@ function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
           secret,
           type,
         });
-        setOtpToken(res.data?.secret ?? null);
+        setOtpMeta({ valid: true, token: res.data?.secret });
         toast.success(res.message);
       } catch (err: any) {
         toast.error("Failed to verify Otp", {
@@ -127,7 +158,7 @@ function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
   }, [secret, identifier, otpPurpose, type]);
 
   useEffect(() => {
-    if (otpToken) {
+    if (otpMeta?.valid) {
       form.reset({
         firstName: "",
         identifier,
@@ -135,7 +166,7 @@ function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
         confirmPassword: "",
       });
     }
-  }, [otpToken]);
+  }, [identifier, form, otpMeta?.valid]);
 
   useEffect(() => {
     if (redirectUrl && !isOpen) {
@@ -143,7 +174,11 @@ function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
     }
   }, [redirectUrl, isOpen, router]);
 
-  identifier = useStore(form.store, (state) => state.values.identifier);
+  useEffect(() => {
+    if (formIdentifier) {
+      setIdentifier(formIdentifier);
+    }
+  }, [formIdentifier]);
 
   return (
     <div className={cn("flex flex-col gap-6", className)}>
@@ -157,7 +192,7 @@ function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
                   className="flex flex-col items-center gap-2 font-medium"
                 >
                   <GalleryVerticalEnd className="size-6" />
-                  <span className="sr-only">Logo</span>
+                  <span className="sr-only">One World Tours</span>
                 </Link>
               )}
               <h1 className="text-2xl font-bold capitalize">
@@ -169,10 +204,10 @@ function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
               </h1>
               <p className="text-muted-foreground text-sm text-balance">
                 {formType === "sign-up"
-                  ? "Enter your email below to create your account"
+                  ? "Enter your identifier below to create your account"
                   : formType === "sign-in"
-                    ? "Login to your App Name account"
-                    : `Enter your email to continue`}
+                    ? "Login to your One world account"
+                    : `Enter your identifier to continue`}
               </p>
             </div>
             {formType === "sign-up" && (
@@ -185,15 +220,15 @@ function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
               form={form}
               name="identifier"
               label="Email / Mobile"
-              disabled={!!otpToken}
+              disabled={!!otpMeta?.valid}
             />
             <div
               className={cn(
                 "flex gap-4",
-                formType !== "sign-up" ? "flex-col" : "items-center"
+                formType !== "sign-up" ? "flex-col" : "items-center",
               )}
             >
-              {(!formType.includes("password") || !!otpToken) && (
+              {(!formType.includes("password") || !!otpMeta?.valid) && (
                 <>
                   <InputField
                     form={form}
@@ -239,6 +274,15 @@ function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
               )}
             </div>
 
+            {formType === "sign-in" && (
+              <InputField
+                form={form}
+                type="checkbox"
+                name="rememberDevice"
+                label="Remember Me"
+              />
+            )}
+
             <form.Subscribe selector={(state: any) => state.canSubmit}>
               {(canSubmit: boolean) => (
                 <Button
@@ -251,7 +295,7 @@ function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
                     ? " Create Account"
                     : formType === "sign-in"
                       ? "Login"
-                      : !!otpToken
+                      : !!otpMeta?.valid
                         ? formType.split("-").join(" ")
                         : "Send Otp"}
                   {isLoading && <LoaderCircle className="animate-spin" />}
@@ -273,9 +317,10 @@ function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
           </Form>
 
           <div className="bg-muted relative hidden md:block">
-            <img
+            <Image
               src="/placeholder.svg"
               alt="Image"
+              fill
               className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
             />
           </div>
@@ -287,7 +332,7 @@ function AuthForm({ className, formType, otpQuery }: AuthFormProps) {
         identifier={identifier}
         purpose={otpPurpose}
         redirectUrl={redirectUrl}
-        setOtpToken={setOtpToken}
+        setOtpMeta={setOtpMeta}
       />
       <FieldDescription className="px-6 text-center">
         By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}

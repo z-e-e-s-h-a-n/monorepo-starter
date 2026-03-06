@@ -10,9 +10,11 @@ export interface DatePickerFieldProps<
   TFormData,
 > extends BaseFieldProps<TFormData> {
   disableBefore?: string;
+  mode?: "date" | "range" | "time";
 }
 
 export const DatePickerField = <TFormData,>({
+  // mode,
   disabled,
   disableBefore,
   ...props
@@ -33,7 +35,7 @@ export const DatePickerField = <TFormData,>({
                 variant="outline"
                 className={cn(
                   "w-full justify-between bg-transparent dark:bg-input/30 dark:hover:bg-input/50",
-                  (field.value ?? "") === "" && "text-muted-foreground!"
+                  (field.value ?? "") === "" && "text-muted-foreground!",
                 )}
                 id={field.name}
                 aria-invalid={isInvalid}

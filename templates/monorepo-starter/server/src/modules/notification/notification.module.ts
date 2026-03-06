@@ -1,12 +1,15 @@
 import { Global, Module } from "@nestjs/common";
+
+import { PushService } from "./push.service";
+import { EmailService } from "./email.service";
+import { MessagingService } from "./messaging.service";
 import { NotificationService } from "./notification.service";
-import { TemplateModule } from "@modules/template/template.module";
-import { NodemailerService } from "./nodemailer.service";
+import { NotificationController } from "./notification.controller";
 
 @Global()
 @Module({
-  imports: [TemplateModule],
-  providers: [NotificationService, NodemailerService],
+  controllers: [NotificationController],
+  providers: [EmailService, PushService, MessagingService, NotificationService],
   exports: [NotificationService],
 })
 export class NotificationModule {}

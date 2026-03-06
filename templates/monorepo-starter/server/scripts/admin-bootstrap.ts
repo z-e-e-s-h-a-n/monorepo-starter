@@ -3,15 +3,15 @@ import { PrismaClient } from "../prisma/generated/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import argon2 from "argon2";
 
-const connectionString = `${process.env.DB_URI}`;
+const connectionString = process.env.DB_URI;
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 async function adminBootstrap() {
-  const { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME, NODE_ENV } = process.env;
+  const { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME } = process.env;
 
-  if (NODE_ENV === "production" && !ADMIN_EMAIL) {
-    throw new Error("ADMIN env vars must be set explicitly in production");
+  if (process.env.NODE_ENV === "production") {
+    console.log("⚠️  Running in PRODUCTION");
   }
 
   if (!ADMIN_EMAIL || !ADMIN_PASSWORD || !ADMIN_NAME) {
@@ -21,10 +21,12 @@ async function adminBootstrap() {
   console.log("🚀 Checking for existing admin...");
 
   const existingAdmin = await prisma.user.findFirst({
-    where: { roles: { some: { role: "admin", revokedAt: null } } },
+    where: { role: "admin" },
   });
 
   if (existingAdmin) {
+    console.log("existingAdmin", existingAdmin.id);
+
     throw new Error("❌ Admin already exists. Aborting.");
   }
 
@@ -42,7 +44,8 @@ async function adminBootstrap() {
       lastName,
       displayName: ADMIN_NAME?.trim(),
       isEmailVerified: true,
-      roles: { create: [{ role: "admin" }] },
+      role: "admin",
+      status: "active",
     },
   });
 

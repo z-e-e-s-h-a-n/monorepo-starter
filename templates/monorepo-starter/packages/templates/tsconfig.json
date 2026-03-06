@@ -1,0 +1,13 @@
+{
+  "extends": "@workspace/config/typescript/react",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "outDir": "dist",
+    "incremental": false,
+    "paths": {
+      "@workspace/templates/*": ["src/*"]
+    }
+  },
+  "include": [".", "../contracts/src/**/*types.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}

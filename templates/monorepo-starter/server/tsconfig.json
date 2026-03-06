@@ -1,24 +1,28 @@
 {
-  "extends": "@workspace/config/typescript/nest",
+  "extends": "@workspace/config/typescript/node",
   "compilerOptions": {
     "baseUrl": ".",
     "outDir": "dist",
     "paths": {
       "@/*": ["src/*"],
-      "@modules/*" : ["src/modules/*"],
-      "@decorators/*": ["src/lib/decorators/*"],
-      "@dto/*": ["src/lib/dto/*"],
-      "@filters/*": ["src/lib/filters/*"],
-      "@guards/*": ["src/lib/guards/*"],
-      "@interceptors/*": ["src/lib/interceptors/*"],
-      "@pipes/*": ["src/lib/pipes/*"],
-      "@schemas/*": ["src/lib/schemas/*"],
-      "@templates/*": ["src/lib/templates/*"],
-      "@utils/*": ["src/lib/utils/*"],
-      "@constants/*": ["src/lib/constants/*"],
+      "@/decorators/*": ["src/lib/decorators/*"],
+      "@/dto/*": ["src/lib/dto/*"],
+      "@/filters/*": ["src/lib/filters/*"],
+      "@/guards/*": ["src/lib/guards/*"],
+      "@/middleware/*": ["src/lib/middleware/*"],
+      "@/interceptors/*": ["src/lib/interceptors/*"],
+      "@/pipes/*": ["src/lib/pipes/*"],
+      "@/schemas/*": ["src/lib/schemas/*"],
+      "@/templates/*": ["src/lib/templates/*"],
+      "@/utils/*": ["src/lib/utils/*"],
+      "@/constants/*": ["src/lib/constants/*"],
       "@generated/prisma": ["./prisma/generated/client"]
     }
   },
-  "include": ["**/*.ts",  "../packages/contracts/src/**/*.d.ts"],
+  "include": [
+    "**/*.ts",
+    "../packages/templates/src/types/global.d.ts",
+    "../packages/contracts/src/**/*types.d.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }

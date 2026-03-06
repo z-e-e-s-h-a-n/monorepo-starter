@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   Field,
   FieldDescription,
@@ -51,12 +52,13 @@ type FieldValidatorsFor<
 >;
 
 interface FormProps<TFormData> {
+  id?: string;
   form: AnyFormApi<TFormData>;
   title?: string | React.ReactNode;
   desc?: string;
   btnText?: string;
   children: React.ReactNode;
-  isLoading?: boolean;
+  isPending?: boolean;
   className?: string;
 }
 
@@ -64,7 +66,7 @@ export interface BaseFieldProps<
   TFormData,
   TName extends DeepKeys<TFormData> = DeepKeys<TFormData>,
 > {
-  name: TName;
+  name: TName & string;
   desc?: string;
   label?: string | React.ReactNode;
   placeholder?: string;
@@ -74,38 +76,50 @@ export interface BaseFieldProps<
   validators?: FieldValidatorsFor<TFormData, TName>;
 }
 
-interface FormFieldProps<TFormData> extends BaseFieldProps<TFormData> {
-  children: (fieldProps: {
-    name: DeepKeys<TFormData>;
-    value: any;
-    placeholder?: string;
-    onBlur: () => void;
-    onChange: (e: any) => void;
-    isInvalid: boolean;
-    disabled?: boolean;
-  }) => React.ReactNode;
+export interface FieldChildrenProps<TFormData> {
+  name: DeepKeys<TFormData> & string;
+  value: any;
+  placeholder?: string;
+  onBlur: () => void;
+  onChange: (e: any) => void;
+  isInvalid: boolean;
+  disabled?: boolean;
+}
+
+export interface FormFieldProps<TFormData> extends BaseFieldProps<TFormData> {
+  children: (fieldProps: FieldChildrenProps<TFormData>) => React.ReactNode;
 }
 
 export const Form = <TFormData,>({
+  id,
   form,
   title,
   desc,
   children,
-  isLoading,
+  isPending,
   btnText,
   className,
 }: FormProps<TFormData>) => {
   return (
-    <section className="space-y-8">
-      <div>
+    <section className="space-y-8" id={id}>
+      <div className=" flex items-center justify-between">
         {title && <h2 className="capitalize text-lg font-semibold">{title}</h2>}
         {desc && <p>{desc}</p>}
+        <Button
+          variant="secondary"
+          onClick={() => {
+            console.log("values:", form.state.values);
+            console.log("errors:", form.getAllErrors());
+          }}
+        >
+          Form Logs
+        </Button>
       </div>
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           e.stopPropagation();
-          form.handleSubmit();
+          await form.handleSubmit();
         }}
         autoComplete="off"
       >
@@ -113,16 +127,16 @@ export const Form = <TFormData,>({
           {children}
 
           {btnText && (
-            <form.Subscribe selector={(state: any) => state.canSubmit}>
-              {(canSubmit: boolean) => (
+            <form.Subscribe selector={(state) => state.canSubmit}>
+              {(canSubmit) => (
                 <Button
                   size="lg"
-                  disabled={!canSubmit || isLoading}
+                  disabled={!canSubmit || isPending}
                   type="submit"
                   className="w-max capitalize"
                 >
                   {btnText}
-                  {isLoading && <LoaderCircle className="animate-spin" />}
+                  {isPending && <LoaderCircle className="animate-spin" />}
                 </Button>
               )}
             </form.Subscribe>
@@ -147,17 +161,15 @@ export const FormField = <TFormData,>({
   if (!placeholder && typeof label === "string") placeholder = label;
 
   return (
-    <form.Field
-      name={name}
-      validators={validators}
-      children={(field) => {
+    <form.Field name={name} validators={validators}>
+      {(field) => {
         const isInvalid =
           field.state.meta.isTouched && !field.state.meta.isValid;
 
         const fieldProps = {
           name: field.name,
           placeholder,
-          value: !field.state.value ? undefined : field.state.value,
+          value: field.state.value,
           onBlur: field.handleBlur,
           onChange: (e: any) => field.handleChange(e?.target?.value ?? e),
           isInvalid,
@@ -176,10 +188,10 @@ export const FormField = <TFormData,>({
             )}
             {children(fieldProps)}
             {desc && <FieldDescription>{desc}</FieldDescription>}
-            {isInvalid && <FieldError errors={field.state.meta.errors} />}
+            {isInvalid && <FieldError errors={[field.state.meta.errors[0]]} />}
           </Field>
         );
       }}
-    />
+    </form.Field>
   );
 };

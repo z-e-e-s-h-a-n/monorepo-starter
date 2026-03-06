@@ -1,7 +1,7 @@
 import * as winston from "winston";
 import "winston-daily-rotate-file";
 import { utilities } from "nest-winston";
-import { appName } from "@constants/app";
+import { appName } from "@workspace/shared/constants";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -11,7 +11,7 @@ export const winstonConfig = {
       level: isProduction ? "info" : "debug",
       format: winston.format.combine(
         winston.format.timestamp(),
-        utilities.format.nestLike(appName, { prettyPrint: true })
+        utilities.format.nestLike(appName.short, { prettyPrint: true }),
       ),
     }),
 

@@ -1,4 +1,4 @@
-import { API_URL, apiClient, executeApi } from "@workspace/sdk/lib/api-client";
+import { API_URL, apiClient, executeApi } from "../lib";
 
 /* =========================
    AUTH
@@ -21,38 +21,51 @@ export const requestOtp = (data: RequestOtpType) =>
 
 export const validateOtp = (params: ValidateOtpType) =>
   executeApi<ValidateOtpResponse>(() =>
-    apiClient.get("/auth/validate-otp", { params })
+    apiClient.get("/auth/validate-otp", { params }),
   );
 
 /* =========================
-   PASSWORD
+   PASSWORD / MFA
    ========================= */
 
 export const resetPassword = (data: ResetPasswordType) =>
   executeApi(() => apiClient.post("/auth/reset-password", data));
 
+export const updateMfa = (data: UpdateMfaType) =>
+  executeApi(() => apiClient.post("/auth/update-mfa", data));
+
 /* =========================
    IDENTIFIER CHANGE
    ========================= */
 
-export const requestChangeIdentifier = (data: ChangeIdentifierType) =>
-  executeApi(() => apiClient.post("/auth/change-identifier", data));
+export const requestUpdateIdentifier = (data: UpdateIdentifierType) =>
+  executeApi(() => apiClient.post("/auth/request-update-identifier", data));
 
-export const verifyChangeIdentifier = (params: ChangeIdentifierType) =>
-  executeApi(() => apiClient.get("/auth/change-identifier", { params }));
+export const verifyUpdateIdentifier = (params: UpdateIdentifierType) =>
+  executeApi(() => apiClient.get("/auth/verify-update-identifier", { params }));
 
 /* =========================
    OAuth
    ========================= */
 
-export const redirectToOAuth = (windowRef: any, provider: OAuthProvider) => {
-  const clientUrl = windowRef.location.origin;
-  windowRef.location.href = `${API_URL}/oauth/${provider}?clientUrl=${clientUrl}`;
+export const redirectToOAuth = (provider: OAuthProvider) => {
+  if (typeof window === "undefined") return;
+  const redirectUrl = window.location.origin;
+  window.location.href = `${API_URL}/oauth/${provider}?redirectUrl=${redirectUrl}`;
 };
 
 /* =========================
-   USER
+   Sessions
    ========================= */
 
-export const getCurrentUser = () =>
-  executeApi<UserResponse>(() => apiClient.get("/auth/me"));
+export const listSessions = () =>
+  executeApi<SessionResponse[]>(() => apiClient.get("/auth/sessions"));
+
+export const revokeAllSessions = () =>
+  executeApi(() => apiClient.delete("/auth/sessions"));
+
+export const revokeSession = (id: string) =>
+  executeApi(() => apiClient.delete(`/auth/sessions/${id}`));
+
+export const validateSession = () =>
+  executeApi(() => apiClient.get("/auth/session/validate"));

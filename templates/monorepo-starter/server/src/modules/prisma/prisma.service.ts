@@ -3,9 +3,10 @@ import { Injectable } from "@nestjs/common";
 import { PrismaClient } from "@generated/prisma";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-import { LoggerService } from "@modules/logger/logger.service";
-import { InjectLogger } from "@decorators/logger.decorator";
 import { softDeleteExtension } from "./prisma.extension";
+import { InjectLogger } from "@/decorators/logger.decorator";
+import { EnvService } from "@/modules/env/env.service";
+import { LoggerService } from "@/modules/logger/logger.service";
 
 @Injectable()
 export class PrismaService
@@ -15,9 +16,9 @@ export class PrismaService
   @InjectLogger()
   private readonly logger!: LoggerService;
 
-  constructor() {
+  constructor(env: EnvService) {
     const adapter = new PrismaPg({
-      connectionString: process.env.DB_URI!,
+      connectionString: env.get("DB_URI"),
     });
 
     super({ adapter });

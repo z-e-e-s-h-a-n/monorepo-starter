@@ -1,16 +1,9 @@
-// navigation.ts
 import {
   IconDashboard,
-  IconPlane,
-  IconBuildingSkyscraper,
-  IconCar,
-  IconWorld,
-  IconMap,
   IconUsers,
   IconSettings,
   type Icon,
-  IconHelp,
-  IconSearch,
+  IconPhoto,
 } from "@tabler/icons-react";
 
 export type NavItem = {
@@ -25,9 +18,7 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-export const requiredRoles: UserRole[] = ["admin"];
-
-export const navigation: NavGroup[] = [
+export const sidebarMenu: NavGroup[] = [
   {
     items: [
       {
@@ -39,99 +30,21 @@ export const navigation: NavGroup[] = [
   },
 
   {
-    groupLabel: "TRAVEL",
-    items: [
-      {
-        title: "Flights",
-        icon: IconPlane,
-        children: [
-          {
-            title: "Bookings",
-            url: "/flights/bookings",
-          },
-          {
-            title: "Add Booking",
-            url: "/flights/bookings/new",
-          },
-        ],
-      },
-
-      {
-        title: "Hotels",
-        icon: IconBuildingSkyscraper,
-        children: [
-          {
-            title: "Hotels",
-            url: "/hotels",
-          },
-          {
-            title: "Rooms",
-            url: "/hotels/rooms",
-          },
-          {
-            title: "Bookings",
-            url: "/hotels/bookings",
-          },
-        ],
-      },
-
-      {
-        title: "Visas",
-        icon: IconWorld,
-        children: [
-          {
-            title: "Visa Products",
-            url: "/visas/products",
-          },
-          {
-            title: "Bookings",
-            url: "/visas/bookings",
-          },
-        ],
-      },
-
-      {
-        title: "Tours",
-        icon: IconMap,
-        children: [
-          {
-            title: "Tour Packages",
-            url: "/tours/packages",
-          },
-          {
-            title: "Bookings",
-            url: "/tours/bookings",
-          },
-        ],
-      },
-
-      {
-        title: "Transport",
-        icon: IconCar,
-        children: [
-          {
-            title: "Sectors",
-            url: "/transport/sectors",
-          },
-          {
-            title: "Bookings",
-            url: "/transport/bookings",
-          },
-        ],
-      },
-    ],
-  },
-
-  {
     groupLabel: "MANAGEMENT",
     items: [
       {
         title: "Users",
         icon: IconUsers,
         children: [
-          { title: "Users", url: "/users" },
-          { title: "Add User", url: "/users/add" },
+          { title: "Users", url: "/admin/users" },
+          { title: "Add User", url: "/admin/users/new" },
         ],
+      },
+
+      {
+        title: "Media",
+        url: "/media",
+        icon: IconPhoto,
       },
     ],
   },
@@ -142,16 +55,6 @@ export const navigation: NavGroup[] = [
         title: "Settings",
         url: "/settings",
         icon: IconSettings,
-      },
-      {
-        title: "Get Help",
-        url: "/help",
-        icon: IconHelp,
-      },
-      {
-        title: "Search",
-        url: "/search",
-        icon: IconSearch,
       },
     ],
   },

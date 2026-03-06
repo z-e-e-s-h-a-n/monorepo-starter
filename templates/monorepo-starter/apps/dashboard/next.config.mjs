@@ -1,6 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@workspace/ui", "@workspace/sdk"],
+  transpilePackages: ["@workspace/ui"],
+  allowedDevOrigins: ["192.168.100.9"],
+
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+      },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
+    ],
+  },
+
   async redirects() {
     return [
       {
@@ -9,9 +24,6 @@ const nextConfig = {
         permanent: false,
       },
     ];
-  },
-  experimental: {
-    authInterrupts: true,
   },
 };
 

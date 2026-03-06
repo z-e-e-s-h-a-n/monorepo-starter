@@ -11,25 +11,36 @@ datasource db {
 // ENUMS
 //
 
+enum ThemeMode {
+  light
+  dark
+  system
+}
+
 enum UserRole {
   admin
-  agent
   customer
 }
 
+enum UserStatus {
+  pending
+  active
+  suspended
+}
+
 enum OtpPurpose {
-  setPassword
-  resetPassword
-  verifyIdentifier
-  changeIdentifier
-  enableMfa
-  disableMfa
-  verifyMfa
+  authSetPassword
+  authResetPassword
+  authVerifyIdentifier
+  authUpdateIdentifier
+  authUpdateMfa
+  authDisableMfa
+  authVerifyMfa
 }
 
 enum OtpType {
-  otp
-  token
+  numericCode
+  secureToken
 }
 
 enum MfaMethod {
@@ -39,18 +50,65 @@ enum MfaMethod {
   authApp
 }
 
-enum NotificationType {
+enum SessionStatus {
+  active
+  revoked
+  expired
+}
+
+enum NotificationChannel {
+  push
   email
   sms
   whatsapp
-  inApp
+}
+
+enum MessagingChannel {
+  sms
+  whatsapp
+}
+
+enum PushProvider {
+  fcm
+  expo
+}
+
+enum NotificationPurpose {
+  authSignUp
+  authSignIn
+  authSetPassword
+  authResetPassword
+  authVerifyIdentifier
+  authUpdateIdentifier
+  authUpdateMfa
+  authDisableMfa
+  authVerifyMfa
+
+  accountSuspended
+  accountReactivated
+}
+
+enum NotificationPriority {
+  normal
+  important
 }
 
 enum NotificationStatus {
   pending
+  partial
   sent
   failed
-  read
+}
+
+enum MediaVisibility {
+  private
+  public
+}
+
+enum MediaType {
+  photo
+  logo
+  other
 }
 
 //
@@ -63,16 +121,27 @@ model User {
   firstName   String
   lastName    String?
   displayName String
-  imageUrl    String?
-  password    String?
+  password    String? @db.VarChar(255)
+
+  imageId String?
+  image   Media?  @relation("UserImage", fields: [imageId], references: [id])
 
   // Contact info
-  email           String? @unique
-  phone           String? @unique
+  email           String? @unique @db.VarChar(255)
+  phone           String? @unique @db.VarChar(20)
   isEmailVerified Boolean @default(false)
   isPhoneVerified Boolean @default(false)
 
-  // Status
+  role   UserRole
+  status UserStatus @default(pending)
+
+  preferredTheme    ThemeMode @default(system)
+  pushNotifications Boolean   @default(false)
+
+  preferredMfa    MfaMethod?
+  fallbackChannel MessagingChannel @default(sms)
+
+  loginAlerts Boolean   @default(true)
   lastLoginAt DateTime?
 
   // Meta
@@ -81,79 +150,51 @@ model User {
   deletedAt DateTime?
 
   // Relations
-  refreshTokens   RefreshToken[]
-  otps            Otp[]
-  roles           RoleAssignment[]
-  securitySetting SecuritySetting?
-
+  otps          Otp[]
+  sessions      Session[]
   notifications Notification[]
-  backupCodes   BackupCode[]
+  medias        Media[]        @relation("UserUploads")
 
   // Indexes
-  @@index([email])
-  @@index([phone])
+  @@index([status])
+  @@index([role])
   @@index([email, isEmailVerified])
   @@index([phone, isPhoneVerified])
+  @@index([deletedAt])
 }
 
-model RoleAssignment {
-  id     String   @id @default(ulid())
+model Session {
+  id String @id @default(ulid())
+
   userId String
-  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role   UserRole
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  revokedAt DateTime?
-
-  @@unique([userId, role])
-}
-
-model SecuritySetting {
-  id     String @id @default(ulid())
-  userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  preferredMfa  MfaMethod?
-  recoveryEmail String?
-  recoveryPhone String?
-  isMfaEnabled  Boolean    @default(false)
-  loginAlerts   Boolean    @default(true)
+  refreshTokenHash String
+  status           SessionStatus @default(active)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  ip       String
+  location String
+  isp      String?
+  timezone String
 
-  @@index([userId])
-  @@index([isMfaEnabled])
-}
+  deviceId   String
+  deviceType String
+  deviceInfo String
 
-model BackupCode {
-  id        String    @id @default(ulid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  code      String    @unique
-  usedAt    DateTime?
+  isTrusted  Boolean   @default(false)
+  lastSeenAt DateTime?
+
+  pushProvider PushProvider?
+  pushToken    String?
+
   createdAt DateTime  @default(now())
   expiresAt DateTime
+  revokedAt DateTime?
 
-  @@index([userId, usedAt])
-}
-
-model RefreshToken {
-  id          String   @id @default(ulid())
-  token       String   @unique
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ip          String
-  userAgent   String
-  lastUsed    DateTime @default(now())
-  createdAt   DateTime @default(now())
-  expiresAt   DateTime
-  blacklisted Boolean  @default(false)
-
-  @@index([userId])
+  @@unique([userId, deviceId])
   @@index([expiresAt])
-  @@index([userId, expiresAt])
+  @@index([userId, status])
+  @@index([expiresAt, status])
 }
 
 model Otp {
@@ -161,8 +202,9 @@ model Otp {
   userId    String
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   purpose   OtpPurpose
-  type      OtpType    @default(otp)
+  type      OtpType    @default(numericCode)
   secret    String
+  meta      Json?
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime   @default(now())
@@ -173,20 +215,57 @@ model Otp {
 }
 
 model Notification {
-  id        String             @id @default(ulid())
-  userId    String
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      NotificationType
-  title     String?
-  message   String?
-  purpose   String
-  metadata  Json?
-  status    NotificationStatus @default(pending)
-  sentAt    DateTime?
+  id     String @id @default(ulid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  purpose  NotificationPurpose
+  channels NotificationChannel[]
+  priority NotificationPriority  @default(normal)
+
+  subject   String
+  message   String
+  recipient String
+  meta      Json?
+
+  status NotificationStatus @default(pending)
+
   readAt    DateTime?
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([userId])
-  @@index([userId, readAt])
+  @@index([status, createdAt])
+}
+
+model Media {
+  id String @id @default(ulid())
+
+  uploadedById String
+  uploadedBy   User   @relation("UserUploads", fields: [uploadedById], references: [id])
+
+  url      String @unique
+  filename String
+  mimeType String
+  size     Int
+  hash     String @unique
+
+  title      String
+  altText    String?
+  type       MediaType
+  visibility MediaVisibility @default(private)
+
+  notes String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  users User[] @relation("UserImage")
+
+  @@index([type])
+  @@index([filename])
+  @@index([uploadedById])
+  @@index([createdAt])
+  @@index([deletedAt])
 }

@@ -1,19 +1,36 @@
-import { Body, Controller, Get, Post, Query, Req, Res } from "@nestjs/common";
-import { AuthService } from "./auth.service";
+import type { Request, Response } from "express";
 import {
-  ChangeIdentifierDto,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  Res,
+} from "@nestjs/common";
+import {
+  UpdateIdentifierDto,
   RequestOtpDto,
   ResetPasswordDto,
   SignInDto,
   SignUpDto,
   ValidateOtpDto,
+  UpdateMfaDto,
 } from "@workspace/contracts/auth";
-import type { Request, Response } from "express";
-import { Public } from "@decorators/public.decorator";
+
+import { AuthService } from "./auth.service";
+import { Public } from "@/decorators/public.decorator";
+import { User } from "@/decorators/user.decorator";
+import { TokenService } from "@/modules/token/token.service";
 
 @Controller("auth")
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly tokenService: TokenService,
+  ) {}
 
   @Public()
   @Post("signup")
@@ -26,17 +43,17 @@ export class AuthController {
   async signIn(
     @Body() dto: SignInDto,
     @Res({ passthrough: true }) res: Response,
-    @Req() req: Request
+    @Req() req: Request,
   ) {
     return this.authService.signIn(dto, req, res);
   }
 
   @Post("signout")
   async signOut(
+    @User("sessionId") sessionId: string,
     @Res({ passthrough: true }) res: Response,
-    @Req() req: Request
   ) {
-    return this.authService.signOut(req, res);
+    return this.authService.signOut(sessionId, res);
   }
 
   @Public()
@@ -50,7 +67,7 @@ export class AuthController {
   async validateOtp(
     @Query() dto: ValidateOtpDto,
     @Res({ passthrough: true }) res: Response,
-    @Req() req: Request
+    @Req() req: Request,
   ) {
     return this.authService.validateOtp(dto, req, res);
   }
@@ -61,19 +78,39 @@ export class AuthController {
     return this.authService.resetPassword(dto);
   }
 
-  @Post("change-identifier")
-  async changeIdentifier(@Body() dto: ChangeIdentifierDto) {
-    return this.authService.changeIdentifierReq(dto);
-  }
-
   @Public()
-  @Get("change-identifier")
-  async verifyIdentifier(@Query() dto: ChangeIdentifierDto) {
-    return this.authService.changeIdentifier(dto);
+  @Get("verify-update-identifier")
+  async verifyUpdateIdentifier(@Query() dto: UpdateIdentifierDto) {
+    return this.authService.verifyUpdateIdentifier(dto);
   }
 
-  @Get("/me")
-  async getUser(@Req() req: Request) {
-    return this.authService.getUser(req);
+  @Post("request-update-identifier")
+  async requestUpdateIdentifier(@Body() dto: UpdateIdentifierDto) {
+    return this.authService.requestUpdateIdentifier(dto);
+  }
+
+  @Post("update-mfa")
+  async updateMfa(@Body() dto: UpdateMfaDto) {
+    return this.authService.updateMfa(dto);
+  }
+
+  @Get("sessions")
+  listSessions(@User() user: Express.User) {
+    return this.tokenService.getUserSessions(user);
+  }
+
+  @Delete("sessions")
+  revokeAllSessions(@User() user: Express.User) {
+    return this.tokenService.revokeAllSessions(user);
+  }
+
+  @Delete("sessions/:sessionId")
+  revokeSession(@Param("sessionId") sessionId: string) {
+    return this.tokenService.revokeSession(sessionId);
+  }
+
+  @Get("session/validate")
+  validateSession() {
+    return { message: "Session is valid." };
   }
 }

@@ -1,6 +1,7 @@
-import { Injectable } from "@nestjs/common";
-import { EnvService } from "@modules/env/env.service";
 import type { Response, CookieOptions } from "express";
+import { Injectable } from "@nestjs/common";
+
+import { EnvService } from "@/modules/env/env.service";
 
 @Injectable()
 export class CookieService {
@@ -10,7 +11,7 @@ export class CookieService {
     res: Response,
     key: string,
     value: any,
-    options?: CookieOptions
+    options?: CookieOptions,
   ) => {
     res.cookie(key, value, {
       httpOnly: true,

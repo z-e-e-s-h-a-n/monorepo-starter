@@ -1,10 +1,14 @@
-import { UserRole } from "@generated/prisma";
+import type { UserStatus, UserRole } from "@generated/prisma";
 
 declare global {
   namespace Express {
     interface User {
       id: string;
-      roles: UserRole[];
+      role: UserRole;
+      status: UserStatus;
+      sessionId?: string;
     }
   }
 }
+
+export {};

@@ -1,6 +1,6 @@
 import axios from "axios";
-import type { AxiosError, AxiosInstance, AxiosResponse } from "axios";
-import type { ApiError, ApiResponse } from "./types";
+import type { AxiosInstance, AxiosResponse } from "axios";
+import { ApiException, type ApiResponse, type ApiSuccess } from "./types";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -13,40 +13,58 @@ export const apiClient: AxiosInstance = axios.create({
   },
 });
 
-apiClient.interceptors.response.use(
-  (response: AxiosResponse<ApiResponse<any>>) => {
-    const payload = response.data;
-    if (!payload.success) return Promise.reject(payload);
-    return { ...response, data: payload };
-  },
-  (error: AxiosError<ApiError>) => {
-    const res = error.response?.data;
-    if (!res) return Promise.reject({ status: 0, message: "Network error" });
-    return Promise.reject({ ...res, success: false, data: null });
-  }
-);
-
 export const setClientUrl = (url: string) => {
   apiClient.defaults.headers["x-client-url"] = url;
 };
 
+apiClient.interceptors.request.use((config) => {
+  if (config.headers) {
+    if (typeof window !== "undefined") {
+      config.headers["x-client-url"] = window.location.origin;
+
+      if (window.location.pathname === "/auth/sign-in")
+        config.headers["x-trusted-device"] = config.data?.rememberDevice;
+    }
+  }
+
+  return config;
+});
+
 export const executeApi = async <T = null>(
-  fn: () => Promise<AxiosResponse<ApiResponse<T>>>
-): Promise<ApiResponse<T>> => {
+  fn: () => Promise<AxiosResponse<ApiResponse<T>>>,
+): Promise<ApiSuccess<T>> => {
   try {
     const response = await fn();
     const payload = response.data;
-    if (!payload.success) throw payload;
+
+    if (!payload.success) {
+      throw new ApiException(payload);
+    }
+
     return payload;
-  } catch (err: any) {
-    const res = err.response?.data ?? err;
-    throw {
-      status: res?.status ?? 0,
-      message: res?.message ?? "Network error",
-      data: res?.data ?? null,
-      success: false,
-      action: res?.action ?? undefined,
-    } as ApiError;
+  } catch (err: unknown) {
+    console.log("err", err);
+
+    if (err instanceof ApiException) {
+      throw err;
+    }
+
+    if (axios.isAxiosError(err)) {
+      const res = err.response?.data;
+
+      throw new ApiException({
+        message: res?.message ?? "Network error",
+        status: res?.status ?? 0,
+        action: res?.action,
+        errorCode: res?.errorCode,
+        meta: res?.meta,
+      });
+    }
+
+    throw new ApiException({
+      message: "Unexpected error",
+      status: 0,
+    });
   }
 };
 

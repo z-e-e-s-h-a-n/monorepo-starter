@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   CircleCheckIcon,
@@ -6,12 +6,29 @@ import {
   Loader2Icon,
   OctagonXIcon,
   TriangleAlertIcon,
-} from "lucide-react"
-import { useTheme } from "next-themes"
-import { Toaster as Sonner, type ToasterProps } from "sonner"
+} from "lucide-react";
+import { useTheme } from "next-themes";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import { Toaster as Sonner, toast, type ToasterProps } from "sonner";
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const { theme = "system" } = useTheme();
+  const searchParams = useSearchParams();
+
+  const error = searchParams.get("error");
+  const message = searchParams.get("message");
+
+  useEffect(() => {
+    if (!error || !message) return;
+
+    toast.error(error, { description: message });
+
+    router.replace(pathname);
+  }, [error, message, pathname, router]);
 
   return (
     <Sonner
@@ -34,7 +51,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }
       {...props}
     />
-  )
-}
+  );
+};
 
-export { Toaster }
+export { Toaster };

@@ -1,12 +1,10 @@
+import type { Cache } from "cache-manager";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Inject, Injectable } from "@nestjs/common";
-import type { Cache } from "cache-manager";
 
-export const CACHE_KEYS = {
-  CLIENT_URL: "clientUrl",
-} as const;
+export const CACHE_KEYS = ["clientUrl"] as const;
 
-export type CacheKeys = (typeof CACHE_KEYS)[keyof typeof CACHE_KEYS];
+export type CacheKeys = (typeof CACHE_KEYS)[number] | (string & {});
 
 @Injectable()
 export class CacheService {

@@ -1,34 +1,28 @@
-import { Injectable, type ExecutionContext } from "@nestjs/common";
+import {
+  BadRequestException,
+  mixin,
+  type Type,
+  type ExecutionContext,
+} from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 
-@Injectable()
-export class GoogleAuthGuard extends AuthGuard("google") {
-  getAuthenticateOptions(context: ExecutionContext) {
-    const req = context.switchToHttp().getRequest();
-    const clientUrl = req.query.clientUrl;
+export type OAuthProvider = "google" | "facebook";
 
-    if (!clientUrl) {
-      throw new Error("clientUrl is required");
+export function OAuthGuard(provider: OAuthProvider): Type<any> {
+  class OAuthGuardMixin extends AuthGuard(provider) {
+    getAuthenticateOptions(context: ExecutionContext) {
+      const req = context.switchToHttp().getRequest();
+      const clientUrl = req.query.clientUrl;
+
+      if (typeof clientUrl !== "string") {
+        throw new BadRequestException("clientUrl is required");
+      }
+
+      return {
+        state: Buffer.from(clientUrl).toString("base64"),
+      };
     }
-
-    return {
-      state: Buffer.from(clientUrl).toString("base64"),
-    };
   }
-}
 
-@Injectable()
-export class FacebookAuthGuard extends AuthGuard("facebook") {
-  getAuthenticateOptions(context: ExecutionContext) {
-    const req = context.switchToHttp().getRequest();
-    const clientUrl = req.query.clientUrl;
-
-    if (!clientUrl) {
-      throw new Error("clientUrl is required for Facebook OAuth");
-    }
-
-    return {
-      state: Buffer.from(clientUrl).toString("base64"),
-    };
-  }
+  return mixin(OAuthGuardMixin);
 }

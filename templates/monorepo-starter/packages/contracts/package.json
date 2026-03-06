@@ -4,21 +4,48 @@
   "type": "module",
   "private": true,
   "license": "ISC",
-  "types": "./src/lib/global.d.ts",
   "scripts": {
+    "build": "tsup",
+    "check-types": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0"
   },
   "exports": {
-    "./auth": "./src/auth/index.ts",
-    "./admin": "./src/admin/index.ts",
-    "./lib/*": "./src/lib/*.ts"
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./auth": {
+      "import": "./dist/auth.js",
+      "types": "./dist/auth.d.ts"
+    },
+    "./admin": {
+      "import": "./dist/admin.js",
+      "types": "./dist/admin.d.ts"
+    },
+    "./user": {
+      "import": "./dist/user.js",
+      "types": "./dist/user.d.ts"
+    },
+    "./media": {
+      "import": "./dist/media.js",
+      "types": "./dist/media.d.ts"
+    },
+    "./notification": {
+      "import": "./dist/notification.js",
+      "types": "./dist/notification.d.ts"
+    }
   },
   "dependencies": {
     "nestjs-zod": "^5.1.1",
-    "zod": "^4.3.5"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@workspace/config": "workspace:^",
-    "@types/node": "^25.0.6"
+    "@eslint/js": "^9.39.3",
+    "@types/node": "^25.3.5",
+    "@types/react": "^19.2.14",
+    "@workspace/config": "workspace:*",
+    "eslint": "^9.39.3",
+    "react": "^19.2.4",
+    "tsup": "^8.5.1"
   }
 }

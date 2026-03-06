@@ -1,30 +1,41 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import ms, { type StringValue } from "ms";
+import { toast } from "sonner";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const slugify = (str: string, slug?: string) => {
-  const base = slug && slug.trim().length > 0 ? slug : str;
-
-  return base
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^\w\-]+/g, "")
-    .replace(/\-\-+/g, "-")
-    .replace(/^-+/, "")
-    .replace(/-+$/, "");
+export const copyToClipboard = async (text: string, label: string) => {
+  await navigator.clipboard.writeText(text);
+  toast.success(`${label} copied to clipboard`);
 };
 
-export const parseExpiry = (exp: StringValue, future = false): number => {
-  const val = ms(exp);
-  if (future) return Date.now() + val;
-  return val;
+export const handleDownload = async (media: MediaResponse) => {
+  try {
+    const response = await fetch(media.url);
+    const blob = await response.blob();
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = media.filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.URL.revokeObjectURL(url);
+  } catch {
+    toast.error("Failed to download file.");
+  }
 };
 
-export const expiryDate = (exp: StringValue, future = false): Date => {
-  const val = parseExpiry(exp, future);
-  return new Date(val);
+export const getBackPath = (pathname: string, count = 1) => {
+  const segments = pathname.split("/").filter(Boolean);
+
+  if (count <= 0) return pathname;
+
+  return (
+    "/" + segments.slice(0, Math.max(segments.length - count, 0)).join("/")
+  );
 };

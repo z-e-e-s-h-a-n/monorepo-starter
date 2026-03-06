@@ -8,7 +8,12 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   clean: true,
-  dts: true,
+  dts: false,
   minify: false,
   onSuccess: "node dist/main.js",
+  external: [
+    "@workspace/shared",
+    "@workspace/contracts",
+    "@workspace/templates",
+  ],
 });

@@ -1,31 +1,55 @@
 import { z } from "zod";
+import { $Enums } from "./prisma";
 
 /* =========================
-   COMMON / GLOBAL ENUMS
+   SHARED - ENUMS
 ========================= */
 
-export const SortDirEnum = z.enum(["asc", "desc"]);
+export const SortOrderEnum = z.enum(["asc", "desc"]);
+export const ChartRangeEnum = z.enum(["7d", "30d", "90d"]);
 
-export const UserRoleEnum = z.enum(["admin", "customer"]);
+export const OtpPurposeEnum = z.enum($Enums.OtpPurpose);
+export const OtpTypeEnum = z.enum($Enums.OtpType);
+
+export const ThemeModeEnum = z.enum($Enums.ThemeMode);
+export const MfaMethodEnum = z.enum($Enums.MfaMethod);
+export const SessionStatusEnum = z.enum($Enums.SessionStatus);
+
+export const PushProviderEnum = z.enum($Enums.PushProvider);
+export const MessagingChannelEnum = z.enum($Enums.MessagingChannel);
+export const NotificationChannelEnum = z.enum($Enums.NotificationChannel);
+export const NotificationPurposeEnum = z.enum($Enums.NotificationPurpose);
+export const NotificationStatusEnum = z.enum($Enums.NotificationStatus);
+export const NotificationPriorityEnum = z.enum($Enums.NotificationPriority);
+
+/* =========================
+   SHARED - VARIABLES
+========================= */
+
+export const BaseSortByEnum = z.enum(["createdAt"]);
+
+/* =========================
+   USER
+========================= */
+export const UserRoleEnum = z.enum($Enums.UserRole).exclude(["admin"]);
+export const UserStatusEnum = z.enum($Enums.UserStatus);
 
 export const UserSearchByEnum = z.enum(["id", "email", "phone", "displayName"]);
-
-export const UserSortByEnum = z.enum(["createdAt", "lastLoginAt", "email"]);
-
-export const OtpPurposeEnum = z.enum([
-  "setPassword",
-  "resetPassword",
-  "verifyIdentifier",
-  "changeIdentifier",
-  "enableMfa",
-  "disableMfa",
-  "verifyMfa",
+export const UserSortByEnum = z.enum([
+  "phone",
+  "email",
+  "role",
+  "status",
+  "displayName",
+  "lastLoginAt",
 ]);
 
-export const OtpTypeEnum = z.enum(["otp", "token"]);
+// =========================
+// MEDIA
+// =========================
 
-/* =========================
-   BASE REUSABLE ENUMS
-========================= */
+export const MediaTypeEnum = z.enum($Enums.MediaType);
+export const MediaVisibilityEnum = z.enum($Enums.MediaVisibility);
 
-export const BaseSortByEnum = ["createdAt"] as const;
+export const MediaSearchByEnum = z.enum(["id", "title"]);
+export const MediaSortByEnum = z.enum(["size", "title", "type"]);

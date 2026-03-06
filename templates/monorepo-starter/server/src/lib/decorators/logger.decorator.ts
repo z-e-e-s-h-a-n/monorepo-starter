@@ -1,5 +1,5 @@
 import { Inject } from "@nestjs/common";
-import { LoggerService } from "@modules/logger/logger.service";
+import { LoggerService } from "@/modules/logger/logger.service";
 
 export function InjectLogger(context?: string): PropertyDecorator {
   return (target: object, propertyKey: string | symbol) => {

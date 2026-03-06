@@ -1,73 +1,65 @@
 import { Injectable } from "@nestjs/common";
-import { PrismaService } from "@modules/prisma/prisma.service";
-import { AuthService } from "@modules/auth/auth.service";
-import { SignUpDto } from "@workspace/contracts/auth";
 import type { Prisma } from "@generated/prisma";
+
+import { AuthService } from "@/modules/auth/auth.service";
+import { PrismaService } from "@/modules/prisma/prisma.service";
 
 @Injectable()
 export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
   ) {}
 
-  async createCustomer(dto: SignUpDto) {
-    const { user } = await this.authService.createUser(dto, "customer");
+  async createUser(dto: CUUserDto) {
+    const { role, ...rest } = dto;
+    const { user } = await this.authService.createUser(rest, role);
 
     return {
       message: "Customer created successfully",
-      data: { user },
+      data: user,
     };
   }
 
-  async findAllUsers(query: UserQueryType) {
+  async findAllUsers(query: UserQueryDto) {
     const {
       page,
       limit,
       sortBy,
-      sortDir,
+      sortOrder,
       search,
       searchBy,
       role,
-      deleted,
       isEmailVerified,
       isPhoneVerified,
     } = query;
 
     const where: Prisma.UserWhereInput = {};
 
-    // Filters
-    if (deleted === true) where.deletedAt = { not: null };
-
-    if (role) where.roles = { some: { role } };
-    console.log("role *******", role);
+    if (role) where.role = role;
+    else where.role = { not: "admin" };
 
     if (isEmailVerified !== undefined) where.isEmailVerified = isEmailVerified;
     if (isPhoneVerified !== undefined) where.isPhoneVerified = isPhoneVerified;
 
-    // Search mapping
-    const searchWhereMap: Record<
-      UserSearchByType,
-      (value: string) => Prisma.UserWhereInput
-    > = {
-      id: (v) => ({ id: v }),
-      email: (v) => ({
-        email: { contains: v, mode: "insensitive" },
-      }),
-      phone: (v) => ({
-        phone: { contains: v, mode: "insensitive" },
-      }),
-      displayName: (v) => ({
-        displayName: { contains: v, mode: "insensitive" },
-      }),
-    };
-
     if (search && searchBy) {
-      Object.assign(where, searchWhereMap[searchBy](search));
+      const searchWhereMap: Record<typeof searchBy, any> = {
+        id: { id: search },
+        email: {
+          email: { contains: search, mode: "insensitive" },
+        },
+        phone: {
+          phone: { contains: search, mode: "insensitive" },
+        },
+        displayName: {
+          displayName: { contains: search, mode: "insensitive" },
+        },
+      };
+      Object.assign(where, searchWhereMap[searchBy]);
     }
 
     const skip = (page - 1) * limit;
-    const orderBy = { [sortBy]: sortDir };
+    const orderBy = { [sortBy]: sortOrder };
 
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
@@ -75,25 +67,68 @@ export class AdminService {
         skip,
         take: limit,
         orderBy,
-        select: this.authService.userSelect,
+        ...this.authService.userView,
       }),
       this.prisma.user.count({ where }),
     ]);
 
-    const normalizedUsers = users.map((user) => ({
-      ...user,
-      roles: user.roles.map((r) => r.role),
-    }));
-
     return {
       message: "Users fetched successfully.",
       data: {
-        users: normalizedUsers,
+        users,
         total,
         page,
         limit,
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async findUser(userId: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      ...this.authService.userView,
+    });
+
+    return { message: "User Fetched Successfully.", data: user };
+  }
+
+  async updateUser({ identifier, ...dto }: CUUserDto, userId: string) {
+    const { key, value } = this.authService.parseIdentifier(identifier);
+
+    let hashedPassword: string | null = null;
+
+    if (dto.password) {
+      hashedPassword = await this.authService.hashPassword(dto.password);
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...dto,
+        [key]: value,
+        ...(hashedPassword && { password: hashedPassword }),
+      },
+    });
+
+    return { message: "User Updated Successfully" };
+  }
+
+  async deleteUser(userId: string, force = false) {
+    await this.prisma.user.delete({
+      where: { id: userId },
+      ...({ force } as any),
+    });
+
+    return { message: "User Deleted Successfully." };
+  }
+
+  async restoreUser(userId: string) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { deletedAt: null },
+    });
+
+    return { message: "User Restored Successfully." };
   }
 }

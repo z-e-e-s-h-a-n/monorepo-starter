@@ -1,11 +1,10 @@
 import { Module } from "@nestjs/common";
 import { TokenService } from "./token.service";
-import { JwtModule } from "@nestjs/jwt";
-import { CookieService } from "@utils/cookie.util";
+import { CookieService } from "@/utils/cookie.util";
+import { ClientService } from "@/utils/client.utils";
 
 @Module({
-  imports: [JwtModule.register({})],
-  providers: [TokenService, CookieService],
+  providers: [TokenService, CookieService, ClientService],
   exports: [TokenService],
 })
 export class TokenModule {}

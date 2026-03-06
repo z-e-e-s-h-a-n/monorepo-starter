@@ -2,5 +2,6 @@
 // Generated from schema.prisma
 
 export const SoftDeleteModels = new Set<string>([
-  "User"
+  "User",
+  "Media"
 ]);

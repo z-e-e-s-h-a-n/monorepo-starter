@@ -2,7 +2,7 @@ import React from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
-const Layout = ({ children }: LayoutProps) => {
+const Layout = ({ children }: AppLayoutProps) => {
   return (
     <>
       <Header />
@@ -10,6 +10,6 @@ const Layout = ({ children }: LayoutProps) => {
       <Footer />
     </>
   );
-}
+};
 
 export default Layout;

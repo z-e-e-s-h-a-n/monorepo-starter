@@ -1,21 +1,20 @@
 import crypto from "crypto";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
-import { PrismaService } from "@modules/prisma/prisma.service";
-import { NotificationService } from "@modules/notification/notification.service";
-import { expiryDate } from "@utils/general.util";
-import { EnvService } from "@modules/env/env.service";
-import { LoggerService } from "@modules/logger/logger.service";
-import { InjectLogger } from "@decorators/logger.decorator";
-import { CacheService } from "@modules/cache/cache.service";
-import type { TemplateProps } from "@templates/notification.templates";
+import { futureDate } from "@workspace/shared/utils";
+
+import { InjectLogger } from "@/decorators/logger.decorator";
+import { PrismaService } from "@/modules/prisma/prisma.service";
+import { EnvService } from "@/modules/env/env.service";
+import { LoggerService } from "@/modules/logger/logger.service";
+import { CacheService } from "@/modules/cache/cache.service";
+import { NotificationService } from "@/modules/notification/notification.service";
 
 interface SendOtpPayload {
-  userId: string;
   identifier: string;
   purpose: OtpPurpose;
   type?: OtpType;
   notify?: boolean;
-  metadata: TemplateProps;
+  meta: EmailTemplateProps;
 }
 
 interface verifyOtpPayload {
@@ -34,20 +33,19 @@ export class OtpService {
     private readonly prisma: PrismaService,
     private readonly notifyService: NotificationService,
     private readonly env: EnvService,
-    private readonly cache: CacheService
+    private readonly cache: CacheService,
   ) {}
 
   async sendOtp({
-    userId,
     identifier,
     purpose,
-    type = "otp",
+    type = "numericCode",
     notify = true,
-    metadata,
+    meta,
   }: SendOtpPayload) {
     let otp = await this.prisma.otp.findFirst({
       where: {
-        userId,
+        userId: meta.user.id,
         purpose,
         type,
         usedAt: null,
@@ -58,11 +56,12 @@ export class OtpService {
     if (!otp) {
       otp = await this.prisma.otp.create({
         data: {
-          userId,
+          userId: meta.user.id,
           purpose,
           type,
           secret: this.generateSecret(type),
-          expiresAt: expiryDate(this.env.get("OTP_EXP"), true),
+          expiresAt: futureDate(this.env.get("OTP_EXP")),
+          meta: meta as any,
         },
       });
     }
@@ -72,16 +71,20 @@ export class OtpService {
     const clientUrl = (await this.cache.get("clientUrl")) as string;
 
     await this.notifyService.sendNotification({
-      userId: userId,
       purpose,
       to: identifier,
-      metadata: { otp, identifier, ...metadata, clientUrl },
+      meta: { otp, identifier, ...meta, clientUrl },
     });
 
     return otp;
   }
 
-  async verifyOtp({ userId, secret, purpose, type = "otp" }: verifyOtpPayload) {
+  async verifyOtp({
+    userId,
+    secret,
+    purpose,
+    type = "numericCode",
+  }: verifyOtpPayload) {
     const otp = await this.prisma.otp.findFirst({
       where: {
         userId,
@@ -112,9 +115,9 @@ export class OtpService {
 
   private generateSecret(type: OtpType, prefix = "") {
     switch (type) {
-      case "token":
+      case "secureToken":
         return `${prefix}${crypto.randomBytes(32).toString("hex")}`;
-      case "otp":
+      case "numericCode":
         return crypto.randomInt(100000, 999999).toString();
       default:
         throw new Error(`Unsupported type: ${type}`);

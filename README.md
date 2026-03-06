@@ -33,4 +33,4 @@ This will generate a ready-to-use monorepo under `my-new-project` with:
 
 ---
 
-Made with ❤️ by **JZ Digital Labs**
+Made with ❤️ by **ZHX Solutions**

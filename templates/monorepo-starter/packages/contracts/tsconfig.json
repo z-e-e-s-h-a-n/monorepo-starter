@@ -1,9 +1,8 @@
 {
-  "extends": "@workspace/config/typescript/base",
+  "extends": "@workspace/config/typescript/node",
   "compilerOptions": {
-    "baseUrl": ".",
     "outDir": "dist",
-    "rootDir": ".",
+    "baseUrl": ".",
     "paths": {
       "@workspace/contracts/*": ["src/*"]
     }

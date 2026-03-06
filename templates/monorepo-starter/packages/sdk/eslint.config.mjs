@@ -1,4 +1,1 @@
-import { config } from "@workspace/config/eslint/base";
-
-/** @type {import("eslint").Linter.Config} */
-export default config;
+export { default } from "@workspace/config/eslint/node";

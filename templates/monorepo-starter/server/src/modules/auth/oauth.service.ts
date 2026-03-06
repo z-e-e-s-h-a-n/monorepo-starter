@@ -12,19 +12,21 @@ import {
   Strategy as FacebookStrategy,
   type Profile as FacebookProfile,
 } from "passport-facebook";
-import { EnvService } from "@modules/env/env.service";
-import { PrismaService } from "@modules/prisma/prisma.service";
-import { OtpService } from "./otp.service";
-import { NotificationService } from "@modules/notification/notification.service";
+import { slugify } from "@workspace/shared/utils";
 
-interface NormalizedProfile {
-  provider: "google" | "facebook";
+import { OtpService } from "./otp.service";
+import { EnvService } from "@/modules/env/env.service";
+import { PrismaService } from "@/modules/prisma/prisma.service";
+import { NotificationService } from "@/modules/notification/notification.service";
+
+interface OAuthProfile {
+  provider: OAuthProvider;
   id: string;
   email: string | null;
-  displayName: string;
   firstName: string;
   lastName: string;
-  photo?: string;
+  displayName: string;
+  imageUrl?: string;
 }
 
 @Injectable()
@@ -33,7 +35,7 @@ export class OAuthService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly otpService: OtpService,
     private readonly env: EnvService,
-    private readonly notifyService: NotificationService
+    private readonly notifyService: NotificationService,
   ) {}
 
   onModuleInit() {
@@ -58,8 +60,8 @@ export class OAuthService implements OnModuleInit {
           } catch (err) {
             done(err, false);
           }
-        }
-      )
+        },
+      ),
     );
   }
 
@@ -72,7 +74,6 @@ export class OAuthService implements OnModuleInit {
           clientSecret: this.env.get("FACEBOOK_CLIENT_SECRET"),
           callbackURL: this.env.get("FACEBOOK_CALLBACK_URL"),
           scope: "email",
-          profileFields: ["id", "emails", "name", "displayName"],
         },
         async (_, __, profile: FacebookProfile, done) => {
           try {
@@ -81,8 +82,8 @@ export class OAuthService implements OnModuleInit {
           } catch (err) {
             done(err, null);
           }
-        }
-      )
+        },
+      ),
     );
   }
 
@@ -95,7 +96,6 @@ export class OAuthService implements OnModuleInit {
 
     let user = await this.prisma.user.findUnique({
       where: { email: normalized.email },
-      include: { roles: true },
     });
 
     if (!user) {
@@ -105,48 +105,69 @@ export class OAuthService implements OnModuleInit {
           firstName: normalized.firstName,
           lastName: normalized.lastName,
           displayName: normalized.displayName,
-          imageUrl: normalized.photo,
           isEmailVerified: true,
           password: null,
-          roles: { create: [{ role: "customer" }] },
+          role: "customer",
         },
-        include: { roles: true },
       });
 
-      const { roles, ...rest } = user;
-
       await this.notifyService.sendNotification({
-        userId: rest.id,
-        purpose: "signup",
-        to: rest.email!,
-        metadata: { user: rest },
+        purpose: "authSignUp",
+        to: user.email!,
+        meta: { user },
       });
     }
 
-    const { roles, password, ...rest } = user;
+    if (normalized.imageUrl) {
+      await this.prisma.media.upsert({
+        where: {
+          url: normalized.imageUrl,
+        },
+        create: {
+          type: "photo",
+          url: normalized.imageUrl,
+          filename: `${slugify(normalized.displayName)}-avatar`,
+          title: `${slugify(normalized.displayName)}-avatar`,
+          mimeType: "image/jpeg",
+          size: 0,
+          hash: crypto.randomUUID(),
+          uploadedById: user.id,
+        },
+        update: {
+          url: normalized.imageUrl,
+          filename: `${slugify(normalized.displayName)}-avatar`,
+          mimeType: "image/jpeg",
+          size: 0,
+          hash: crypto.randomUUID(),
+          uploadedById: user.id,
+        },
+      });
+    }
+
+    const { password, ...rest } = user;
 
     if (!password) {
       await this.otpService.sendOtp({
-        userId: rest.id,
-        purpose: "setPassword",
+        purpose: "authSetPassword",
         identifier: normalized.email,
-        type: "token",
-        metadata: { user: rest },
+        type: "secureToken",
+        meta: { user: rest },
       });
     }
 
     return {
       id: rest.id,
-      roles: roles.map((r) => r.role),
+      role: user.role,
+      status: user.status,
     };
   }
 
   private normalizeProfile(
-    profile: GoogleProfile | FacebookProfile
-  ): NormalizedProfile {
-    const provider = profile.provider as "google" | "facebook";
-
+    profile: GoogleProfile | FacebookProfile,
+  ): OAuthProfile {
+    const provider = profile.provider as OAuthProvider;
     const email = profile.emails?.[0]?.value || null;
+
     const displayName =
       profile.displayName ||
       `${profile.name?.givenName || ""} ${profile.name?.familyName || ""}`.trim();
@@ -154,16 +175,16 @@ export class OAuthService implements OnModuleInit {
     const firstName = profile.name?.givenName || "";
     const lastName = profile.name?.familyName || "";
 
-    const photo = profile.photos?.[0]?.value;
+    const imageUrl = profile.photos?.[0]?.value;
 
     return {
-      provider,
       id: profile.id,
+      provider,
       email,
       displayName,
       firstName,
       lastName,
-      photo,
+      imageUrl,
     };
   }
 }

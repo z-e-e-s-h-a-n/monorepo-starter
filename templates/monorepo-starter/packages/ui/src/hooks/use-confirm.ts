@@ -1,1 +1,12 @@
-export { useConfirm } from "../provider/alert-dialog";
+import { useContext } from "react";
+import { ConfirmContext } from "../provider/confirm-dialog";
+
+export const useConfirm = () => {
+  const ctx = useContext(ConfirmContext);
+
+  if (!ctx) {
+    throw new Error("useConfirm must be used within ConfirmProvider");
+  }
+
+  return ctx;
+};

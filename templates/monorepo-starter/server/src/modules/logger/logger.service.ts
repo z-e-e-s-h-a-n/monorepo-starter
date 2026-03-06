@@ -8,7 +8,7 @@ export class LoggerService {
 
   constructor(
     @Inject(WINSTON_MODULE_PROVIDER)
-    private readonly winston: Logger
+    private readonly winston: Logger,
   ) {}
 
   setContext(context: string) {

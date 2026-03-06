@@ -1,13 +1,19 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
-import type { CanActivate, ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { Request, Response } from "express";
-import { IS_PUBLIC_KEY } from "@decorators/public.decorator";
-import { ROLES_KEY } from "@decorators/roles.decorator";
+import {
+  Injectable,
+  ForbiddenException,
+  UnauthorizedException,
+  type CanActivate,
+  type ExecutionContext,
+} from "@nestjs/common";
 import type { UserRole } from "@generated/prisma";
-import { TokenService } from "@modules/token/token.service";
-import { LoggerService } from "@modules/logger/logger.service";
-import { InjectLogger } from "@decorators/logger.decorator";
+
+import { ROLES_KEY } from "@/decorators/roles.decorator";
+import { InjectLogger } from "@/decorators/logger.decorator";
+import { IS_PUBLIC_KEY } from "@/decorators/public.decorator";
+import { TokenService } from "@/modules/token/token.service";
+import { LoggerService } from "@/modules/logger/logger.service";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -16,7 +22,7 @@ export class AuthGuard implements CanActivate {
 
   constructor(
     private readonly tokenService: TokenService,
-    private readonly reflector: Reflector
+    private readonly reflector: Reflector,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -29,73 +35,34 @@ export class AuthGuard implements CanActivate {
 
     const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
       ROLES_KEY,
-      [context.getHandler(), context.getClass()]
+      [context.getHandler(), context.getClass()],
     );
 
     const ctx = context.switchToHttp();
     const req = ctx.getRequest<Request>();
     const res = ctx.getResponse<Response>();
 
-    const accessToken = req.cookies["accessToken"];
-    const refreshToken = req.cookies["refreshToken"];
-
     try {
-      if (!accessToken) {
-        this.logger.warn(`Access token missing}`, {
-          route: req.url,
-        });
-        throw new Error("Access token is missing or expired");
-      }
-      const decoded = await this.tokenService.verifyToken(
-        accessToken,
-        "access"
-      );
-      if (!decoded) throw new UnauthorizedException("Invalid Access Token");
-      this.checkRoles(decoded.roles, requiredRoles);
-      this.tokenService.attachDecodedUser(req, decoded);
-      this.logger.debug(`✅ User Attached - Auth success`, {
-        userId: decoded.sub,
-      });
+      const payload = await this.tokenService.verifyToken(req, "accessToken");
+      this.checkRoles(payload.rol, requiredRoles);
+      this.tokenService.attachAuthContext(req, payload);
       return true;
-    } catch (err) {
-      if (err instanceof UnauthorizedException) throw err;
+    } catch (err: any) {
+      const code = err?.response?.errorCode ?? err?.errorCode;
+      if (code !== "access_token_missing") throw err;
 
-      if (!refreshToken)
-        throw new UnauthorizedException("Refresh token is missing");
-
-      try {
-        const decoded = await this.tokenService.verifyToken(
-          refreshToken,
-          "refresh"
-        );
-        if (!decoded) throw new Error("Invalid or expire Refresh Token");
-        this.logger.debug(`Refresh token verified`, {
-          userId: decoded.sub,
-        });
-        this.checkRoles(decoded.roles, requiredRoles);
-        await this.tokenService.refreshTokens(req, res, decoded);
-
-        if (!req["user"]) throw new UnauthorizedException("User not found");
-
-        return true;
-      } catch (err) {
-        if (err instanceof UnauthorizedException) throw err;
-        this.logger.warn(`Access denied: Missing or invalid token`);
-        throw new UnauthorizedException(
-          "Unauthorized: Invalid or expired token."
-        );
-      }
+      const payload = await this.tokenService.verifyToken(req, "refreshToken");
+      this.checkRoles(payload.rol, requiredRoles);
+      await this.tokenService.refreshTokens(req, res, payload);
+      if (!req["user"]) throw new UnauthorizedException("User not found");
+      return true;
     }
   }
 
-  private checkRoles(userRoles: UserRole[], requiredRoles?: UserRole[]) {
+  private checkRoles(userRole: UserRole, requiredRoles?: UserRole[]) {
     if (requiredRoles?.length) {
-      const hasRole = userRoles.some((role) => requiredRoles.includes(role));
-      if (!hasRole) {
-        throw new UnauthorizedException(
-          `Forbidden: Requires ${requiredRoles.join(", ")} access.`
-        );
-      }
+      const hasRole = requiredRoles.some((role) => role === userRole);
+      if (!hasRole) throw new ForbiddenException({ errorCode: "forbidden" });
     }
   }
 }
