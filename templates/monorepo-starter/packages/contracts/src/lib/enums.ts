@@ -22,6 +22,8 @@ export const NotificationPurposeEnum = z.enum($Enums.NotificationPurpose);
 export const NotificationStatusEnum = z.enum($Enums.NotificationStatus);
 export const NotificationPriorityEnum = z.enum($Enums.NotificationPriority);
 
+export const ContactMessageStatusEnum = z.enum($Enums.ContactMessageStatus);
+
 /* =========================
    SHARED - VARIABLES
 ========================= */
@@ -53,3 +55,38 @@ export const MediaVisibilityEnum = z.enum($Enums.MediaVisibility);
 
 export const MediaSearchByEnum = z.enum(["id", "title"]);
 export const MediaSortByEnum = z.enum(["size", "title", "type"]);
+
+/* =========================
+   CONTACT MESSAGE
+========================= */
+export const ContactMessageSortByEnum = z.enum([
+  "name",
+  "email",
+  "phone",
+  "subject",
+  "repliedAt",
+]);
+
+export const ContactMessageSearchByEnum = z.enum([
+  "name",
+  "email",
+  "phone",
+  "subject",
+  "source",
+]);
+
+/* =========================
+   NEWSLETTER SUBSCRIBER
+========================= */
+export const NewsletterSubscriberSortByEnum = z.enum([
+  "name",
+  "email",
+  "subscribedAt",
+  "unsubscribedAt",
+]);
+
+export const NewsletterSubscriberSearchByEnum = z.enum([
+  "name",
+  "email",
+  "source",
+]);

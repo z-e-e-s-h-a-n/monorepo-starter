@@ -1,7 +1,7 @@
 import { Section, Text, Button } from "@react-email/components";
 import { NumericCode } from "./numericCode";
-import type { Otp } from "@workspace/contracts";
 import { diffInMinutes } from "@workspace/shared/utils";
+import type { Otp } from "@workspace/templates/types/global";
 
 interface ActionBlockProps {
   link: string;

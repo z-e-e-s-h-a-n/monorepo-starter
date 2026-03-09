@@ -1,7 +1,7 @@
 import { z } from "zod";
 import * as enums from "./enums";
 import React from "react";
-import { Decimal } from "../lib/prisma";
+import { Prisma } from "../lib/prisma";
 
 /* ======================================================
    GLOBAL DECLARATIONS
@@ -13,7 +13,7 @@ declare global {
   -------------------- */
 
   type Nullable<T> = T | null;
-  type DecimalInstance = InstanceType<typeof Decimal>;
+  type DecimalInstance = InstanceType<typeof Prisma.Decimal>;
   type StrictOmit<T, K extends keyof T> = Omit<T, K>;
   type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
   type ArrayItem<T> = T extends any[] ? T[number] : never;

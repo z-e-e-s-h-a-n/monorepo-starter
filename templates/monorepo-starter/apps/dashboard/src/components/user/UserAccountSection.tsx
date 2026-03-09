@@ -1,41 +1,33 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import z from "zod";
+import { useForm } from "@tanstack/react-form";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
-import { useForm } from "@tanstack/react-form";
 import { Mail, Shield, Phone, Smartphone, Loader2 } from "lucide-react";
-
-import {
-  identifierSchema,
-  passwordSchema,
-  MfaMethodEnum,
-} from "@workspace/contracts";
-
+import z from "zod";
+import { identifierSchema, passwordSchema } from "@workspace/contracts";
 import {
   requestOtp,
   resetPassword,
   requestUpdateIdentifier,
   updateMfa,
 } from "@workspace/sdk/auth";
-
+import { Form } from "@workspace/ui/components/form";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card";
-import { Form } from "@workspace/ui/components/form";
-
 import { Button } from "@workspace/ui/components/button";
-import { Badge } from "@workspace/ui/components/badge";
 import { InputField } from "@workspace/ui/components/input-field";
-import { SelectField } from "@workspace/ui/components/select-field";
 import OtpModal, { type OtpMeta } from "@workspace/ui/components/otp-modal";
-
-import UserSessions from "./UserSessions";
+import { SelectField } from "@workspace/ui/components/select-field";
+import { MfaMethodEnum } from "@workspace/contracts";
+import { Badge } from "@workspace/ui/components/badge";
 import useUser from "@/hooks/user";
+import UserSessions from "./UserSessions";
 
 type IdentifierType = "email" | "phone";
 
@@ -56,7 +48,7 @@ const AccountSection = ({ user }: AccountSectionProps) => {
 
   const schema = z.object({
     newIdentifier:
-      otpPurpose === "authUpdateIdentifier"
+      otpPurpose === "updateIdentifier"
         ? identifierSchema
         : z.string().optional(),
     newPassword: otpPurpose?.includes("Password")
@@ -66,12 +58,12 @@ const AccountSection = ({ user }: AccountSectionProps) => {
       ? passwordSchema
       : z.string().optional(),
     preferredMfa:
-      otpPurpose === "authUpdateMfa" ? MfaMethodEnum : MfaMethodEnum.optional(),
+      otpPurpose === "updateMfa" ? MfaMethodEnum : MfaMethodEnum.optional(),
   });
 
   const form = useForm({
     defaultValues: {
-      newIdentifier: otpPurpose === "authUpdateIdentifier" ? "" : undefined,
+      newIdentifier: otpPurpose === "updateIdentifier" ? "" : undefined,
       newPassword: otpPurpose?.includes("Password") ? "" : undefined,
       confirmPassword: otpPurpose?.includes("Password") ? "" : undefined,
       preferredMfa: user.preferredMfa ?? "email",
@@ -85,7 +77,7 @@ const AccountSection = ({ user }: AccountSectionProps) => {
         setIsLoading(true);
         if (!otpMeta?.token) throw new Error("OTP token is missing");
 
-        if (otpPurpose === "authUpdateIdentifier") {
+        if (otpPurpose === "updateIdentifier") {
           const res = await requestUpdateIdentifier({
             identifier: primaryIdentifier!,
             newIdentifier: value.newIdentifier!,
@@ -94,7 +86,7 @@ const AccountSection = ({ user }: AccountSectionProps) => {
           });
 
           message = res.message;
-        } else if (otpPurpose === "authResetPassword") {
+        } else if (otpPurpose === "updatePassword") {
           const res = await resetPassword({
             identifier: primaryIdentifier!,
             purpose: otpPurpose,
@@ -103,7 +95,7 @@ const AccountSection = ({ user }: AccountSectionProps) => {
           });
 
           message = res.message;
-        } else if (otpPurpose === "authUpdateMfa") {
+        } else if (otpPurpose === "updateMfa") {
           const res = await updateMfa({
             identifier: primaryIdentifier!,
             purpose: otpPurpose,
@@ -208,7 +200,7 @@ const AccountSection = ({ user }: AccountSectionProps) => {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => handleOpen("authUpdateIdentifier", "email")}
+                onClick={() => handleOpen("updateIdentifier", "email")}
                 disabled={isLoading}
               >
                 {user.email ? "Change Email" : "Add Email"}
@@ -216,7 +208,7 @@ const AccountSection = ({ user }: AccountSectionProps) => {
             </div>
 
             {otpMeta?.valid &&
-              otpPurpose === "authUpdateIdentifier" &&
+              otpPurpose === "updateIdentifier" &&
               identifierType === "email" && (
                 <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
                   <InputField
@@ -284,7 +276,7 @@ const AccountSection = ({ user }: AccountSectionProps) => {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => handleOpen("authUpdateIdentifier", "phone")}
+                onClick={() => handleOpen("updateIdentifier", "phone")}
                 disabled={isLoading}
               >
                 {user.phone ? "Change Phone" : "Add Phone"}
@@ -292,7 +284,7 @@ const AccountSection = ({ user }: AccountSectionProps) => {
             </div>
 
             {otpMeta?.valid &&
-              otpPurpose === "authUpdateIdentifier" &&
+              otpPurpose === "updateIdentifier" &&
               identifierType === "phone" && (
                 <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
                   <InputField
@@ -384,7 +376,7 @@ const AccountSection = ({ user }: AccountSectionProps) => {
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => handleOpen("authUpdateMfa")}
+                      onClick={() => handleOpen("updateMfa")}
                     >
                       Change Method
                     </Button>
@@ -392,7 +384,7 @@ const AccountSection = ({ user }: AccountSectionProps) => {
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => handleOpen("authDisableMfa")}
+                      onClick={() => handleOpen("disableMfa")}
                     >
                       Disable
                     </Button>
@@ -401,7 +393,7 @@ const AccountSection = ({ user }: AccountSectionProps) => {
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => handleOpen("authUpdateMfa")}
+                    onClick={() => handleOpen("enableMfa")}
                     disabled={isLoading}
                   >
                     Enable MFA
@@ -410,7 +402,7 @@ const AccountSection = ({ user }: AccountSectionProps) => {
               </div>
             </div>
 
-            {otpMeta?.valid && otpPurpose === "authUpdateMfa" && (
+            {otpMeta?.valid && otpPurpose === "updateMfa" && (
               <div className="space-y-4 p-4 border rounded-lg">
                 <SelectField
                   form={form}
@@ -454,14 +446,14 @@ const AccountSection = ({ user }: AccountSectionProps) => {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => handleOpen("authResetPassword")}
+                onClick={() => handleOpen("updatePassword")}
                 disabled={isLoading}
               >
                 Change Password
               </Button>
             </div>
 
-            {otpMeta?.valid && otpPurpose === "authResetPassword" && (
+            {otpMeta?.valid && otpPurpose === "updatePassword" && (
               <div className="space-y-4 p-4 border rounded-lg">
                 <InputField
                   form={form}

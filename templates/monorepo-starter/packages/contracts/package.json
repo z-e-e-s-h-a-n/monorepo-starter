@@ -22,6 +22,18 @@
       "import": "./dist/admin.js",
       "types": "./dist/admin.d.ts"
     },
+    "./business": {
+      "import": "./dist/business.js",
+      "types": "./dist/business.d.ts"
+    },
+    "./contact": {
+      "import": "./dist/contact.js",
+      "types": "./dist/contact.d.ts"
+    },
+    "./newsletter": {
+      "import": "./dist/newsletter.js",
+      "types": "./dist/newsletter.d.ts"
+    },
     "./user": {
       "import": "./dist/user.js",
       "types": "./dist/user.d.ts"

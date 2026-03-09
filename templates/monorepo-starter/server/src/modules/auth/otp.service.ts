@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
+import type { Otp } from "@generated/prisma";
 import { futureDate } from "@workspace/shared/utils";
 
 import { InjectLogger } from "@/decorators/logger.decorator";
@@ -7,14 +8,39 @@ import { PrismaService } from "@/modules/prisma/prisma.service";
 import { EnvService } from "@/modules/env/env.service";
 import { LoggerService } from "@/modules/logger/logger.service";
 import { CacheService } from "@/modules/cache/cache.service";
-import { NotificationService } from "@/modules/notification/notification.service";
+import {
+  NotificationService,
+  type SendNotificationProps,
+} from "@/modules/notification/notification.service";
 
-interface SendOtpPayload {
+type OtpMetaMap = {
+  verifyMfa: undefined;
+
+  enableMfa: undefined;
+  disableMfa: undefined;
+  updateMfa: undefined;
+
+  resetPassword: undefined;
+  setPassword: undefined;
+  updatePassword: undefined;
+
+  verifyIdentifier: undefined;
+
+  updateIdentifier: {
+    oldIdentifier: string;
+    newIdentifier: string;
+  };
+};
+
+type OtpMeta<P extends OtpPurpose> = OtpMetaMap[P];
+
+interface SendOtpPayload<P extends OtpPurpose> {
   identifier: string;
-  purpose: OtpPurpose;
+  purpose: P;
   type?: OtpType;
   notify?: boolean;
-  meta: EmailTemplateProps;
+  user: SafeUser;
+  meta?: OtpMeta<P>;
 }
 
 interface verifyOtpPayload {
@@ -23,6 +49,10 @@ interface verifyOtpPayload {
   purpose: OtpPurpose;
   type?: OtpType;
 }
+
+type VerifiedOtp<P extends OtpPurpose> = Omit<Otp, "meta"> & {
+  meta: OtpMeta<P>;
+};
 
 @Injectable()
 export class OtpService {
@@ -36,16 +66,17 @@ export class OtpService {
     private readonly cache: CacheService,
   ) {}
 
-  async sendOtp({
+  async sendOtp<P extends OtpPurpose>({
+    user,
     identifier,
     purpose,
     type = "numericCode",
     notify = true,
     meta,
-  }: SendOtpPayload) {
+  }: SendOtpPayload<P>) {
     let otp = await this.prisma.otp.findFirst({
       where: {
-        userId: meta.user.id,
+        userId: user.id,
         purpose,
         type,
         usedAt: null,
@@ -56,12 +87,12 @@ export class OtpService {
     if (!otp) {
       otp = await this.prisma.otp.create({
         data: {
-          userId: meta.user.id,
+          userId: user.id,
           purpose,
           type,
           secret: this.generateSecret(type),
           expiresAt: futureDate(this.env.get("OTP_EXP")),
-          meta: meta as any,
+          meta,
         },
       });
     }
@@ -70,21 +101,24 @@ export class OtpService {
 
     const clientUrl = (await this.cache.get("clientUrl")) as string;
 
-    await this.notifyService.sendNotification({
-      purpose,
-      to: identifier,
-      meta: { otp, identifier, ...meta, clientUrl },
+    const notifyMeta = this.buildOtpNotification(purpose, {
+      user,
+      otp,
+      identifier,
+      clientUrl,
     });
+
+    await this.notifyService.sendNotification(notifyMeta);
 
     return otp;
   }
 
-  async verifyOtp({
+  async verifyOtp<P extends OtpPurpose>({
     userId,
     secret,
     purpose,
     type = "numericCode",
-  }: verifyOtpPayload) {
+  }: verifyOtpPayload & { purpose: P }): Promise<VerifiedOtp<P>> {
     const otp = await this.prisma.otp.findFirst({
       where: {
         userId,
@@ -110,7 +144,12 @@ export class OtpService {
       data: { usedAt: new Date() },
     });
 
-    return otp;
+    const meta = otp.meta as OtpMeta<P>;
+
+    return {
+      ...otp,
+      meta,
+    };
   }
 
   private generateSecret(type: OtpType, prefix = "") {
@@ -121,6 +160,92 @@ export class OtpService {
         return crypto.randomInt(100000, 999999).toString();
       default:
         throw new Error(`Unsupported type: ${type}`);
+    }
+  }
+
+  private buildOtpNotification<P extends OtpPurpose>(
+    purpose: P,
+    payload: {
+      user: SafeUser;
+      otp?: Otp;
+      identifier: string;
+      clientUrl?: string;
+      meta?: OtpMeta<P>;
+    },
+  ): SendNotificationProps {
+    const basePayload = {
+      user: payload.user,
+      otp: payload.otp,
+      clientUrl: payload.clientUrl,
+      identifier: payload.identifier,
+    };
+
+    switch (purpose) {
+      case "verifyMfa":
+        return {
+          ...basePayload,
+          purpose: "verifyMfa",
+        };
+
+      case "enableMfa":
+        return {
+          ...basePayload,
+          action: "enable",
+          purpose: "updateMfa",
+        };
+
+      case "disableMfa":
+        return {
+          ...basePayload,
+          action: "disable",
+          purpose: "updateMfa",
+        };
+
+      case "updateMfa":
+        return {
+          ...basePayload,
+          action: "update",
+          purpose: "updateMfa",
+        };
+
+      case "resetPassword":
+        return {
+          ...basePayload,
+          action: "reset",
+          purpose: "updatePassword",
+        };
+
+      case "setPassword":
+        return {
+          ...basePayload,
+          action: "set",
+          purpose: "updatePassword",
+        };
+
+      case "updatePassword":
+        return {
+          ...basePayload,
+          action: "update",
+          purpose: "updatePassword",
+        };
+
+      case "verifyIdentifier":
+        return {
+          ...basePayload,
+          purpose: "verifyIdentifier",
+        };
+
+      case "updateIdentifier":
+        return {
+          ...basePayload,
+          purpose: "updateIdentifier",
+          meta: payload.meta!,
+        };
+
+      default: {
+        const _exhaustive: never = purpose;
+        throw new Error(`Unhandled purpose: ${_exhaustive}`);
+      }
     }
   }
 }

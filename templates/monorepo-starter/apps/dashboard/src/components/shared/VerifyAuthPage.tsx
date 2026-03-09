@@ -41,7 +41,7 @@ function VerifyAuthPage({
     const verify = async () => {
       try {
         const isUpdateIdentifier =
-          purpose === "authUpdateIdentifier" && newIdentifier;
+          purpose === "updateIdentifier" && newIdentifier;
 
         const res = isUpdateIdentifier
           ? await verifyUpdateIdentifier({

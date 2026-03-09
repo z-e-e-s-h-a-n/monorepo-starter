@@ -1,14 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import z from "zod";
-import Link from "next/link";
-import Image from "next/image";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { cn } from "@workspace/ui/lib/utils";
+import { Button } from "@workspace/ui/components/button";
+import { Card, CardContent } from "@workspace/ui/components/card";
+import { FieldDescription } from "@workspace/ui/components/field";
 import { useForm, useStore } from "@tanstack/react-form";
+import { toast } from "sonner";
+import { Form } from "@workspace/ui/components/form";
+import Link from "next/link";
 import { GalleryVerticalEnd, LoaderCircle } from "lucide-react";
-
+import OtpModal, { type OtpMeta } from "@workspace/ui/components/otp-modal";
+import { useEffect, useState } from "react";
 import {
   requestOtp,
   resetPassword,
@@ -16,22 +18,16 @@ import {
   signUp,
   validateOtp,
 } from "@workspace/sdk/auth";
-
+import SocialAuthField from "./SocialAuthField";
+import { useRouter } from "next/navigation";
+import { InputField } from "@workspace/ui/components/input-field";
+import z from "zod";
 import {
   nameSchema,
   passwordSchema,
   identifierSchema,
 } from "@workspace/contracts";
-
-import { cn } from "@workspace/ui/lib/utils";
-import { Form } from "@workspace/ui/components/form";
-import { Button } from "@workspace/ui/components/button";
-import { Card, CardContent } from "@workspace/ui/components/card";
-import { FieldDescription } from "@workspace/ui/components/field";
-import { InputField } from "@workspace/ui/components/input-field";
-import OtpModal, { type OtpMeta } from "@workspace/ui/components/otp-modal";
-
-import SocialAuthField from "./SocialAuthField";
+import Image from "next/image";
 
 interface AuthFormProps {
   formType: AuthFormType;
@@ -79,7 +75,7 @@ function AuthForm({ className, formType, queryParams }: AuthFormProps) {
       try {
         let message = `${formType} successfully!`;
         if (formType === "sign-up") {
-          setOtpPurpose("authVerifyIdentifier");
+          setOtpPurpose("verifyIdentifier");
           const res = await signUp(value);
           message = res.message;
           setRedirectUrl("/auth/sign-in");
@@ -89,15 +85,13 @@ function AuthForm({ className, formType, queryParams }: AuthFormProps) {
           message = res.message;
           setRedirectUrl("/dashboard");
           if (res.action === "verifyMfa") {
-            setOtpPurpose("authVerifyMfa");
+            setOtpPurpose("verifyMfa");
             setIsOpen(true);
           }
         } else if (formType.includes("password")) {
           if (!otpMeta?.token) {
             const nextPurpose: OtpPurpose =
-              formType === "set-password"
-                ? "authSetPassword"
-                : "authResetPassword";
+              formType === "set-password" ? "setPassword" : "resetPassword";
             setOtpPurpose(nextPurpose);
             const res = await requestOtp({ identifier, purpose: nextPurpose });
             message = res.message;
@@ -117,7 +111,7 @@ function AuthForm({ className, formType, queryParams }: AuthFormProps) {
       } catch (err: any) {
         console.log("err ......", err);
         if (err.action === "verifyIdentifier") {
-          setOtpPurpose("authVerifyIdentifier");
+          setOtpPurpose("verifyIdentifier");
           setRedirectUrl("/auth/sign-in");
           setIsOpen(true);
         }

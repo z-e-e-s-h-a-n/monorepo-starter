@@ -1,6 +1,6 @@
 import { Separator } from "@workspace/ui/components/separator";
 import { SidebarTrigger } from "@workspace/ui/components/sidebar";
-import ThemeSwitch from "@/components/shared/ThemeSwitch";
+import ThemeSwitch from "@workspace/ui/components/theme-toggle";
 
 const Header = () => {
   return (

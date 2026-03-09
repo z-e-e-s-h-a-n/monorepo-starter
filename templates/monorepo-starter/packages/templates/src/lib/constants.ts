@@ -2,21 +2,18 @@ import * as emailTemplates from "@workspace/templates/email";
 
 export const emailTemplateMap: Record<
   NotificationPurpose,
-  EmailTemplateComponent
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  EmailTemplateComponent<any>
 > = {
-  authSignIn: emailTemplates.Signin,
-  authSignUp: emailTemplates.Signup,
-
-  accountSuspended: emailTemplates.AccountSuspended,
-  accountReactivated: emailTemplates.AccountReactivated,
-
-  authVerifyIdentifier: emailTemplates.VerifyIdentifier,
-  authUpdateIdentifier: emailTemplates.UpdateIdentifier,
-
-  authSetPassword: emailTemplates.SetPassword,
-  authResetPassword: emailTemplates.ResetPassword,
-
-  authVerifyMfa: emailTemplates.VerifyMfa,
-  authUpdateMfa: emailTemplates.UpdateMfa,
-  authDisableMfa: emailTemplates.DisableMfa,
+  signIn: emailTemplates.SignIn,
+  signUp: emailTemplates.SignUp,
+  verifyMfa: emailTemplates.VerifyMfa,
+  updateMfa: emailTemplates.UpdateMfa,
+  verifyIdentifier: emailTemplates.VerifyIdentifier,
+  updateIdentifier: emailTemplates.UpdateIdentifier,
+  updatePassword: emailTemplates.UpdatePassword,
+  userStatus: emailTemplates.UserStatus,
+  newsletter: emailTemplates.Newsletter,
+  contactMessage: emailTemplates.ContactMessage,
+  securityAlert: emailTemplates.SecurityAlert,
 };

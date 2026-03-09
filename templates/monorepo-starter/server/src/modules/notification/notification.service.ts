@@ -1,22 +1,25 @@
 import { Injectable } from "@nestjs/common";
+import type { Otp } from "@generated/prisma";
 import { resolveEmailTemplate } from "@workspace/templates";
 import { appName } from "@workspace/shared/constants";
-import { NOTIFICATION_POLICY_MAP } from "@/constants/index";
 
 import { PushService } from "./push.service";
 import { EmailService } from "./email.service";
 import { MessagingService } from "./messaging.service";
 
+import { NOTIFICATION_POLICY_MAP } from "@/constants/index";
 import { InjectLogger } from "@/decorators/logger.decorator";
 import { EnvService } from "@/modules/env/env.service";
 import { PrismaService } from "@/modules/prisma/prisma.service";
 import { LoggerService } from "@/modules/logger/logger.service";
 
-interface SendNotificationProps {
-  to: string;
-  purpose: NotificationPurpose;
-  meta: EmailTemplateProps;
-}
+export type SendNotificationProps = {
+  [K in NotificationPurpose]: { purpose: K } & EmailTemplateMap[K] & {
+      identifier: string;
+      user: SafeUser;
+      otp?: Otp;
+    };
+}[NotificationPurpose];
 
 @Injectable()
 export class NotificationService {
@@ -31,32 +34,29 @@ export class NotificationService {
     private readonly pushService: PushService,
   ) {}
 
-  async sendNotification({ purpose, to, meta }: SendNotificationProps) {
-    const { html, subject, message } = await resolveEmailTemplate(
-      purpose,
-      meta,
-    );
+  async sendNotification(props: SendNotificationProps) {
+    const { html, subject, message } = await resolveEmailTemplate(props);
 
-    const { priority, push } = NOTIFICATION_POLICY_MAP[purpose];
+    const { priority, push } = NOTIFICATION_POLICY_MAP[props.purpose];
     const channels = this.determineChannels(
-      to,
-      meta.user,
+      props.identifier,
+      props.user,
       priority,
       push,
-      !!meta.otp,
+      !!props.otp,
     );
 
     try {
       const notification = await this.prisma.notification.create({
         data: {
-          userId: meta.user.id,
-          recipient: to,
-          purpose,
+          userId: props.user.id,
+          recipient: props.identifier,
+          purpose: props.purpose,
           channels,
           priority,
           subject,
           message,
-          meta: meta as any,
+          meta: props as any,
         },
       });
 
@@ -67,23 +67,23 @@ export class NotificationService {
         try {
           switch (channel) {
             case "email":
-              await this.sendEmail(to, subject, html);
+              await this.sendEmail(props.identifier, subject, html);
               break;
             case "sms":
-              await this.sendMessage("sms", to, message);
+              await this.sendMessage("sms", props.identifier, message);
               break;
             case "whatsapp":
-              await this.sendMessage("whatsapp", to, message);
+              await this.sendMessage("whatsapp", props.identifier, message);
               break;
             case "push":
-              await this.sendPush(meta.user, subject, message);
+              await this.sendPush(props.user, subject, message);
               break;
           }
           anySuccess = true;
         } catch (error) {
           allSuccess = false;
           this.logger.error("Notification send Failed", {
-            to,
+            identifier: props.identifier,
             channel,
             error,
           });
@@ -102,7 +102,7 @@ export class NotificationService {
       });
     } catch (error) {
       this.logger.error(`❌ Notification send Failed`, {
-        to,
+        identifier: props.identifier,
         channels,
         error,
       });
@@ -110,12 +110,12 @@ export class NotificationService {
     }
   }
 
-  private async sendEmail(to: string, subject: string, html: string) {
+  async sendEmail(to: string, subject: string, html: string) {
     const from = `${appName.default} <${this.env.get("SMTP_USER")}>`;
     await this.emailService.sendMail({ from, to, subject, html });
   }
 
-  private async sendMessage(type: MessagingChannel, to: string, text: string) {
+  async sendMessage(type: MessagingChannel, to: string, text: string) {
     if (type === "sms") {
       await this.messagingService.sendSms(to, text);
     } else {
@@ -123,7 +123,7 @@ export class NotificationService {
     }
   }
 
-  private async sendPush(user: SafeUser, subject: string, message: string) {
+  async sendPush(user: SafeUser, subject: string, message: string) {
     await this.pushService.sendPush(user, subject, message);
   }
 

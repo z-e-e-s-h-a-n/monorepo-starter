@@ -1,37 +1,77 @@
-import type {
-  Booking,
-  FlightSegment,
-  Hotel,
-  Otp,
-  Payment,
-  VisaProduct,
-} from "@workspace/contracts";
+import type * as Prisma from "../../../../server/prisma/generated/browser";
+export type Otp = Prisma.Otp;
 
 declare global {
   /********************
    * EMAIL
    ********************/
 
-  interface EmailTemplateComponent {
-    (props: EmailTemplateProps): React.ReactElement;
-    subject: (props: EmailTemplateProps) => string;
-    message: (props: EmailTemplateProps) => string;
-  }
-
+  export type EmailTemplateComponent<TPurpose extends NotificationPurpose> = {
+    (props: EmailTemplateProps<TPurpose>): React.ReactElement;
+    subject: (props: EmailTemplateProps<TPurpose>) => string;
+    message: (props: EmailTemplateProps<TPurpose>) => string;
+  };
   interface EmailTemplateResult {
     subject: string;
     html: string;
     message: string;
   }
 
-  interface EmailTemplateProps {
+  interface EmailTemplateBaseProps {
     user: SafeUser;
-    otp?: Otp;
-    identifier?: string;
-    newIdentifier?: string;
+    otp?: Prisma.Otp;
+    identifier: string;
     clientUrl?: string;
-    message?: string;
+    message: string;
+    contactMessage: Prisma.ContactMessage;
+    newsletterSubscriber: Prisma.NewsletterSubscriber;
   }
+
+  type EmailTemplateMap = {
+    signUp: Pick<EmailTemplateBaseProps, "user">;
+
+    signIn: Pick<EmailTemplateBaseProps, "user">;
+
+    securityAlert: Pick<EmailTemplateBaseProps, "user" | "message">;
+
+    verifyMfa: Pick<EmailTemplateBaseProps, "user" | "otp">;
+
+    updateMfa: {
+      action: "enable" | "disable" | "update";
+    } & Pick<EmailTemplateBaseProps, "user" | "otp">;
+
+    updatePassword: {
+      action: "set" | "update" | "reset";
+    } & Pick<
+      EmailTemplateBaseProps,
+      "user" | "otp" | "identifier" | "clientUrl"
+    >;
+
+    verifyIdentifier: Pick<
+      EmailTemplateBaseProps,
+      "user" | "otp" | "identifier" | "clientUrl"
+    >;
+
+    updateIdentifier: Pick<
+      EmailTemplateBaseProps,
+      "user" | "otp" | "identifier" | "clientUrl"
+    > & {
+      meta: {
+        newIdentifier: string;
+        oldIdentifier: string;
+      };
+    };
+
+    userStatus: Pick<EmailTemplateBaseProps, "user" | "message">;
+
+    newsletter: Pick<EmailTemplateBaseProps, "newsletterSubscriber">;
+
+    contactMessage: Pick<EmailTemplateBaseProps, "contactMessage">;
+  };
+
+  type EmailTemplateProps<T extends NotificationPurpose> = {
+    purpose: T;
+  } & EmailTemplateMap[T];
 }
 
 export {};

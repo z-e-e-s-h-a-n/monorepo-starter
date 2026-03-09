@@ -9,50 +9,55 @@ export const NOTIFICATION_POLICY_MAP: Record<
   { priority: NotificationPriority; push: boolean }
 > = {
   // AUTH
-  authSignUp: {
+  signUp: {
     priority: "normal",
     push: false,
   },
-  authSignIn: {
+  signIn: {
     priority: "normal",
     push: false,
   },
 
-  authSetPassword: {
+  updatePassword: {
     priority: "important",
     push: false,
   },
-  authResetPassword: {
+  verifyIdentifier: {
     priority: "important",
     push: false,
   },
-  authVerifyIdentifier: {
+  updateIdentifier: {
     priority: "important",
     push: false,
   },
-  authUpdateIdentifier: {
+  updateMfa: {
     priority: "important",
     push: false,
   },
-  authUpdateMfa: {
-    priority: "important",
-    push: false,
-  },
-  authDisableMfa: {
-    priority: "important",
-    push: false,
-  },
-  authVerifyMfa: {
+  verifyMfa: {
     priority: "important",
     push: false,
   },
 
   // ACCOUNT
-  accountSuspended: {
+  userStatus: {
     priority: "important",
     push: true,
   },
-  accountReactivated: {
+
+  //Contact Message
+  contactMessage: {
+    priority: "normal",
+    push: false,
+  },
+
+  // Newsletter
+  newsletter: {
+    priority: "normal",
+    push: false,
+  },
+
+  securityAlert: {
     priority: "important",
     push: true,
   },

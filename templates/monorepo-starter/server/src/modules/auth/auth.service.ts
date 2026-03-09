@@ -41,10 +41,10 @@ export class AuthService {
 
     if (!meta.password) {
       await this.otpService.sendOtp({
-        purpose: "authSetPassword",
+        user,
         identifier: value,
         type: "secureToken",
-        meta: { user },
+        purpose: "setPassword",
       });
 
       throw new UnauthorizedException(
@@ -70,9 +70,9 @@ export class AuthService {
 
     if (user.preferredMfa) {
       await this.otpService.sendOtp({
+        user,
         identifier: value,
-        purpose: "authVerifyMfa",
-        meta: { user },
+        purpose: "verifyMfa",
       });
       return {
         message: "MFA code sent. Please verify to complete login.",
@@ -93,9 +93,9 @@ export class AuthService {
 
     if (user.loginAlerts) {
       await this.notifyService.sendNotification({
-        purpose: "authSignIn",
-        to: value,
-        meta: { user },
+        purpose: "signIn",
+        identifier: value,
+        user,
       });
     }
 
@@ -117,50 +117,50 @@ export class AuthService {
     console.log("request received", dto.purpose);
 
     switch (dto.purpose) {
-      case "authVerifyIdentifier": {
+      case "verifyIdentifier": {
         await this.checkVerificationStatus(user, key, value, "verified");
 
         await this.otpService.sendOtp({
+          user,
           identifier: value,
           purpose: dto.purpose,
-          meta: { user },
         });
 
         return { message: "Verification OTP sent." };
       }
 
-      case "authSetPassword":
-      case "authResetPassword": {
-        if (dto.purpose === "authSetPassword" && meta.password) {
+      case "setPassword":
+      case "resetPassword": {
+        if (dto.purpose === "setPassword" && meta.password) {
           throw new BadRequestException(
             "Password already set. Use resetPassword.",
           );
         }
 
         await this.otpService.sendOtp({
+          user,
           identifier: value,
           purpose: dto.purpose,
-          meta: { user },
         });
 
         return { message: `${dto.purpose} OTP sent.` };
       }
 
-      case "authUpdateIdentifier": {
+      case "updateIdentifier": {
         await this.otpService.sendOtp({
+          user,
           identifier: value,
           purpose: dto.purpose,
-          meta: { user },
         });
 
         return { message: `Update ${key} OTP sent.` };
       }
 
-      case "authUpdateMfa": {
+      case "updateMfa": {
         await this.otpService.sendOtp({
+          user,
           identifier: value,
           purpose: dto.purpose,
-          meta: { user },
         });
 
         return {
@@ -168,25 +168,25 @@ export class AuthService {
         };
       }
 
-      case "authDisableMfa": {
+      case "disableMfa": {
         if (!user.preferredMfa) {
           throw new BadRequestException("MFA is already disabled.");
         }
 
         await this.otpService.sendOtp({
+          user,
           identifier: value,
           purpose: dto.purpose,
-          meta: { user },
         });
 
         return { message: "disableMfa OTP sent." };
       }
 
-      case "authVerifyMfa": {
+      case "verifyMfa": {
         await this.otpService.sendOtp({
+          user,
           identifier: value,
           purpose: dto.purpose,
-          meta: { user },
         });
 
         return { message: "verifyMfa OTP sent." };
@@ -208,7 +208,7 @@ export class AuthService {
     });
 
     switch (dto.purpose) {
-      case "authVerifyIdentifier": {
+      case "verifyIdentifier": {
         await this.prisma.user.update({
           where: { id: user.id },
           data:
@@ -220,14 +220,14 @@ export class AuthService {
         return { message: `${key} verified successfully.` };
       }
 
-      case "authSetPassword":
-      case "authResetPassword": {
+      case "setPassword":
+      case "resetPassword": {
         const otp = await this.otpService.sendOtp({
+          user,
           identifier: value,
-          purpose: dto.purpose,
           type: "secureToken",
+          purpose: dto.purpose,
           notify: false,
-          meta: { user },
         });
 
         return {
@@ -236,13 +236,13 @@ export class AuthService {
         };
       }
 
-      case "authUpdateIdentifier": {
+      case "updateIdentifier": {
         const otp = await this.otpService.sendOtp({
+          user,
           identifier: value,
-          purpose: dto.purpose,
           type: "secureToken",
+          purpose: dto.purpose,
           notify: false,
-          meta: { user },
         });
 
         return {
@@ -251,13 +251,13 @@ export class AuthService {
         };
       }
 
-      case "authUpdateMfa": {
+      case "updateMfa": {
         const otp = await this.otpService.sendOtp({
+          user,
           identifier: value,
-          purpose: dto.purpose,
           type: "secureToken",
+          purpose: dto.purpose,
           notify: false,
-          meta: { user },
         });
 
         return {
@@ -266,22 +266,23 @@ export class AuthService {
         };
       }
 
-      case "authDisableMfa": {
+      case "disableMfa": {
         await this.prisma.user.update({
           where: { id: user.id },
           data: { preferredMfa: null },
         });
 
         await this.notifyService.sendNotification({
-          to: dto.identifier,
-          purpose: dto.purpose,
-          meta: { user },
+          identifier: dto.identifier,
+          purpose: "updateMfa",
+          user,
+          action: "update",
         });
 
         return { message: "disableMfa successfully." };
       }
 
-      case "authVerifyMfa": {
+      case "verifyMfa": {
         this.checkUserStatus(user.status);
 
         await this.tokenService.createAuthSession(req, res, {
@@ -323,9 +324,10 @@ export class AuthService {
     });
 
     await this.notifyService.sendNotification({
-      to: dto.identifier,
-      purpose: dto.purpose,
-      meta: { user },
+      identifier: dto.identifier,
+      purpose: "updatePassword",
+      user,
+      action: dto.purpose === "setPassword" ? "set" : "reset",
     });
 
     return {
@@ -349,9 +351,10 @@ export class AuthService {
     });
 
     await this.notifyService.sendNotification({
-      to: dto.identifier,
-      purpose: dto.purpose,
-      meta: { user },
+      identifier: dto.identifier,
+      purpose: "updateMfa",
+      user,
+      action: user.preferredMfa ? "update" : "enable",
     });
 
     return {
@@ -377,10 +380,14 @@ export class AuthService {
     const action = isSameType ? "change" : "update";
 
     await this.otpService.sendOtp({
+      user,
       identifier: newValue,
-      purpose: dto.purpose,
       type: "secureToken",
-      meta: { user, identifier: value, newIdentifier: newValue },
+      purpose: "updateIdentifier",
+      meta: {
+        oldIdentifier: value,
+        newIdentifier: newValue,
+      },
     });
 
     return {
@@ -398,7 +405,7 @@ export class AuthService {
       type: "secureToken",
     });
 
-    const newIdentifier = (otp.meta as Record<string, string>)?.newIdentifier;
+    const newIdentifier = otp.meta?.newIdentifier;
 
     if (!newIdentifier || newIdentifier !== dto.newIdentifier) {
       throw new BadRequestException("Invalid identifier update token.");
@@ -415,22 +422,22 @@ export class AuthService {
 
     await this.tokenService.revokeAllSessions(user);
     await this.notifyService.sendNotification({
-      to: dto.identifier,
-      purpose: dto.purpose,
+      user,
+      identifier: dto.identifier,
+      purpose: "updateIdentifier",
       meta: {
-        user,
-        identifier: dto.identifier,
         newIdentifier: dto.newIdentifier,
+        oldIdentifier: dto.identifier,
       },
     });
 
     await this.notifyService.sendNotification({
-      to: dto.newIdentifier,
-      purpose: dto.purpose,
+      user,
+      identifier: dto.newIdentifier,
+      purpose: "updateIdentifier",
       meta: {
-        user,
-        identifier: dto.identifier,
         newIdentifier: dto.newIdentifier,
+        oldIdentifier: dto.identifier,
       },
     });
 
@@ -457,15 +464,15 @@ export class AuthService {
     });
 
     await this.notifyService.sendNotification({
-      purpose: "authSignUp",
-      to: value,
-      meta: { user },
+      purpose: "signUp",
+      identifier: value,
+      user,
     });
 
     await this.otpService.sendOtp({
+      user,
       identifier: value,
-      purpose: "authVerifyIdentifier",
-      meta: { user },
+      purpose: "verifyIdentifier",
     });
 
     return { user, key };
@@ -542,9 +549,9 @@ export class AuthService {
 
     if (check === "unverified" && !isVerified) {
       await this.otpService.sendOtp({
+        user,
         identifier: value,
-        purpose: "authVerifyIdentifier",
-        meta: { user },
+        purpose: "verifyIdentifier",
       });
 
       throw new UnauthorizedException({
