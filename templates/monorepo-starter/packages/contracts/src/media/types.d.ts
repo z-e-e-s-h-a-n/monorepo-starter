@@ -1,36 +1,19 @@
 import type z from "zod";
 import type {
-  mediaCreateSchema,
   mediaQuerySchema,
   mediaUpdateSchema,
 } from "./schema";
-import { type Media } from "../lib/prisma";
+import type { Media } from "@workspace/db/browser";
+import type { BaseQueryResponse, Sanitize } from "../lib/types";
+import type { BaseUserResponse } from "../user/types";
 
-declare global {
-  /* ======================================================
-     MEDIA — INPUT TYPES
-  ===================================================== */
-  type MediaUpdateType = z.input<typeof mediaUpdateSchema>;
-  type MediaQueryType = z.input<typeof mediaQuerySchema>;
+export type MediaUpdateType = z.input<typeof mediaUpdateSchema>;
+export type MediaQueryType = z.input<typeof mediaQuerySchema>;
 
-  /* ======================================================
-  MEDIA — OUTPUT TYPES
-  ===================================================== */
-  type MediaCreateDto = z.output<typeof mediaCreateSchema>;
-  type MediaUpdateDto = z.output<typeof mediaUpdateSchema>;
-  type MediaQueryDto = z.output<typeof mediaQuerySchema>;
-
-  /* ======================================================
-     MEDIA — RESPONSES
-  ===================================================== */
-
-  interface MediaResponse extends Sanitize<Media> {
-    uploadedBy: BaseUserResponse;
-  }
-
-  interface MediaQueryResponse extends BaseQueryResponse {
-    medias: MediaResponse[];
-  }
+export interface MediaResponse extends Sanitize<Media> {
+  uploadedBy: BaseUserResponse;
 }
 
-export {};
+export interface MediaQueryResponse extends BaseQueryResponse {
+  medias: MediaResponse[];
+}

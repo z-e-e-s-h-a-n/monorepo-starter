@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
-import type { Otp } from "@generated/prisma";
-import { resolveEmailTemplate } from "@workspace/templates";
+import {
+  resolveEmailTemplate,
+  type EmailTemplateMap,
+} from "@workspace/templates";
 import { appName } from "@workspace/shared/constants";
 
 import { PushService } from "./push.service";
@@ -12,6 +14,15 @@ import { InjectLogger } from "@/decorators/logger.decorator";
 import { EnvService } from "@/modules/env/env.service";
 import { PrismaService } from "@/modules/prisma/prisma.service";
 import { LoggerService } from "@/modules/logger/logger.service";
+import type {
+  MessagingChannel,
+  NotificationChannel,
+  NotificationPriority,
+  NotificationPurpose,
+  NotificationStatus,
+} from "@workspace/contracts";
+import type { SafeUser } from "@workspace/contracts/user";
+import type { Otp } from "@workspace/db/client";
 
 export type SendNotificationProps = {
   [K in NotificationPurpose]: { purpose: K } & EmailTemplateMap[K] & {

@@ -20,7 +20,9 @@ import {
 import { MediaService } from "./media.service";
 import { User } from "@/decorators/user.decorator";
 import { BooleanQuery } from "@/lib/decorators/boolean-query.decorator";
+import { Roles } from "@/lib/decorators/roles.decorator";
 
+@Roles("admin")
 @Controller("media")
 export class MediaController {
   constructor(private readonly mediaService: MediaService) {}

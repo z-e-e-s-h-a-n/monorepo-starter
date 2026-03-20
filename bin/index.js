@@ -14,9 +14,19 @@ const replaceDbName = async (filePath, projectName) => {
 
   let content = await fs.readFile(filePath, "utf-8");
   content = content.replace(
-    /postgresql:\/\/([^/]+)\/your-proj/g,
-    `postgresql://$1/${projectName}`
+    /postgresql:\/\/([^/]+)\/[^"\s]+/g,
+    `postgresql://$1/${projectName}`,
   );
+  await fs.writeFile(filePath, content);
+};
+
+const replaceInFile = async (filePath, replacements) => {
+  if (!(await fs.pathExists(filePath))) return;
+
+  let content = await fs.readFile(filePath, "utf-8");
+  for (const [pattern, value] of replacements) {
+    content = content.replace(pattern, value);
+  }
   await fs.writeFile(filePath, content);
 };
 
@@ -60,32 +70,27 @@ const main = async () => {
 
   console.log(cyan("📦 Creating project..."));
 
-  // Copy template
   const templateDir = path.join(__dirname, "../templates/monorepo-starter");
   await fs.copy(templateDir, projectPath);
 
-  // Update package.json
   const pkgPath = path.join(projectPath, "package.json");
   const pkg = await fs.readJson(pkgPath);
   pkg.name = targetDir;
   await fs.writeJson(pkgPath, pkg, { spaces: 2 });
 
-  // Rename gitignore
   const gitignoreSrc = path.join(projectPath, "gitignore");
   const gitignoreDest = path.join(projectPath, ".gitignore");
   if (fs.existsSync(gitignoreSrc)) {
     fs.renameSync(gitignoreSrc, gitignoreDest);
   }
 
-  // --- SERVER SETUP ---
   const serverDir = path.join(projectPath, "server");
-  const prismaDir = path.join(serverDir, "prisma");
+  const dbDir = path.join(projectPath, "packages/db");
+  const prismaDir = path.join(dbDir, "prisma");
 
-  // Remove prisma folders
   await fs.remove(path.join(prismaDir, "migrations"));
   await fs.remove(path.join(prismaDir, "generated"));
 
-  // Create .env from example
   const envExamplePath = path.join(serverDir, ".env.example");
   const envPath = path.join(serverDir, ".env");
 
@@ -93,13 +98,17 @@ const main = async () => {
     await fs.copy(envExamplePath, envPath);
   }
 
-  // Replace DB name
   await replaceDbName(envExamplePath, targetDir);
   await replaceDbName(envPath, targetDir);
+  await replaceInFile(envExamplePath, [[/Starter Admin/g, `${targetDir} Admin`]]);
+  await replaceInFile(envPath, [[/Starter Admin/g, `${targetDir} Admin`]]);
+  await replaceInFile(path.join(projectPath, "README.md"), [
+    [/Monorepo Starter/g, targetDir],
+  ]);
 
-  // Init git
   process.chdir(projectPath);
   execSync("git init", { stdio: "ignore" });
+  execSync("git branch -M main", { stdio: "ignore" });
   execSync("git add .", { stdio: "ignore" });
   execSync('git commit -m "Initial commit"', { stdio: "ignore" });
 

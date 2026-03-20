@@ -9,6 +9,8 @@ import ListPage from "@/components/shared/ListPage";
 import DateWrapper from "@/components/shared/DateWrapper";
 import type { ColumnConfig } from "@/components/shared/GenericTable";
 import type { SearchByOption } from "@/components/shared/SearchToolbar";
+import type { UserResponse } from "@workspace/contracts/user";
+import type { UserQueryType } from "@workspace/contracts/admin";
 
 const userColumns: ColumnConfig<UserResponse, UserQueryType>[] = [
   {
@@ -70,7 +72,7 @@ const userSearchByOptions: SearchByOption<UserQueryType>[] = [
 const page = () => {
   return (
     <ListPage
-      entityKey="users"
+      dataKey="users"
       columns={userColumns}
       searchByOptions={userSearchByOptions}
       useListHook={useAdminUsers}

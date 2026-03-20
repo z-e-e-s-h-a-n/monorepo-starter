@@ -1,12 +1,25 @@
 {
   "name": "create-zhx-monorepo",
-  "version": "2.1.1",
-  "description": "Create a ZHX monorepo with one command",
+  "version": "2.2.0",
+  "description": "Create a production-ready ZHX monorepo with one command",
   "bin": {
     "create-zhx-monorepo": "bin/index.js"
   },
   "type": "module",
   "license": "MIT",
+  "files": [
+    "bin",
+    "templates",
+    "README.md"
+  ],
+  "keywords": [
+    "monorepo",
+    "turbo",
+    "pnpm",
+    "nextjs",
+    "nestjs",
+    "starter"
+  ],
   "engines": {
     "node": ">=24"
   },

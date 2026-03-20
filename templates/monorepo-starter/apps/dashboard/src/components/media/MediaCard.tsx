@@ -2,6 +2,10 @@
 
 import Image from "next/image";
 import { toast } from "sonner";
+import type {
+  MediaResponse,
+  MediaUpdateType,
+} from "@workspace/contracts/media";
 import {
   MoreVertical,
   Trash2,
@@ -54,7 +58,6 @@ export function MediaCard({ media, onSelect }: MediaCardProps) {
       closeDialog();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      console.log("error:", err);
       toast.error(err.message);
     }
   };

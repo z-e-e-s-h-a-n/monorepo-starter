@@ -16,6 +16,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 import { FormField, type BaseFieldProps } from "./form";
 import type { ApiException } from "@workspace/sdk";
+import type { BaseQueryResponse, BaseResponse } from "@workspace/contracts";
 
 export type ComboboxOption<TData, TValue = TData[keyof TData] & string> = {
   id?: string;

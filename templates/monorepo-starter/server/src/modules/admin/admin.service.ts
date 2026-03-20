@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import type { Prisma } from "@generated/prisma";
 
 import { AuthService } from "@/modules/auth/auth.service";
 import { PrismaService } from "@/modules/prisma/prisma.service";
+import type { CUUserDto, UserQueryDto } from "@workspace/contracts/admin";
+import type { Prisma } from "@workspace/db/client";
 
 @Injectable()
 export class AdminService {

@@ -4,6 +4,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@workspace/ui/components/avatar";
+import type { UserResponse } from "@workspace/contracts/user";
 
 interface UserCardProps {
   currentUser?: UserResponse;

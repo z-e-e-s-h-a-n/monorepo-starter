@@ -3,6 +3,10 @@ import { appName } from "@workspace/shared/constants";
 import { Greeting } from "./components/greeting";
 import { Header } from "./components/header";
 import { Layout } from "./components/layout";
+import type {
+  EmailTemplateComponent,
+  EmailTemplateProps,
+} from "../types/global";
 
 const isSuspended = (props: EmailTemplateProps<"userStatus">) =>
   props.user.status === "suspended";

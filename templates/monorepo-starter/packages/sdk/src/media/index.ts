@@ -1,4 +1,10 @@
 import apiClient, { executeApi } from "../lib/api-client";
+import type {
+  MediaQueryResponse,
+  MediaQueryType,
+  MediaResponse,
+  MediaUpdateType,
+} from "@workspace/contracts/media";
 
 export const createMedia = (data: FormData) =>
   executeApi<MediaResponse>(() =>

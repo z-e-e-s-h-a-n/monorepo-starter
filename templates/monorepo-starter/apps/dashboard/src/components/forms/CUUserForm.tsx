@@ -4,8 +4,12 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
 
-import { CUUserSchema } from "@workspace/contracts/admin";
-import { UserRoleEnum, UserStatusEnum } from "@workspace/contracts";
+import { CUUserSchema, type CUUserType } from "@workspace/contracts/admin";
+import {
+  UserRoleEnum,
+  UserStatusEnum,
+  type BaseCUFormProps,
+} from "@workspace/contracts";
 
 import { Form } from "@workspace/ui/components/form";
 import { Button } from "@workspace/ui/components/button";
@@ -59,7 +63,7 @@ const CUUserForm = ({ entityId, formType }: BaseCUFormProps) => {
   if (isLoading) return <CUFormSkeleton />;
 
   return (
-    <Form form={form} isPending={isPending}>
+    <Form form={form}>
       <div>
         <h2 className="capitalize text-lg font-semibold">
           {formType === "add" ? "Add New" : "Update"} User

@@ -135,6 +135,7 @@ export const createCrudHooks = <
       isLoading: query.isLoading,
       isFetching: query.isFetching,
       fetchError: query.error,
+
       mutateAsync: mutation.mutateAsync,
       isPending: mutation.isPending,
       mutateError: mutation.error,

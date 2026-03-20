@@ -1,6 +1,5 @@
 import crypto from "crypto";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
-import type { Otp } from "@generated/prisma";
 import { futureDate } from "@workspace/shared/utils";
 
 import { InjectLogger } from "@/decorators/logger.decorator";
@@ -12,6 +11,9 @@ import {
   NotificationService,
   type SendNotificationProps,
 } from "@/modules/notification/notification.service";
+import type { SafeUser } from "@workspace/contracts/user";
+import type { OtpPurpose, OtpType } from "@workspace/contracts";
+import type { Otp } from "@workspace/db/client";
 
 type OtpMetaMap = {
   verifyMfa: undefined;

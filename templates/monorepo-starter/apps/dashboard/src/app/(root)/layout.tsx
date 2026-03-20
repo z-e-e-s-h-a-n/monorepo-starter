@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/auth";
 import Header from "@/components/layout/Header";
 import AppSidebar from "@/components/layout/AppSidebar";
 import RootLayoutSkeleton from "@/components/skeleton/RootLayoutSkeleton";
+import type { AppLayoutProps } from "@workspace/contracts";
 
 const Layout = ({ children }: AppLayoutProps) => {
   const { isLoading, isSuccess, error } = useAuth();
@@ -31,7 +32,7 @@ const Layout = ({ children }: AppLayoutProps) => {
       <AppSidebar variant="inset" />
       <SidebarInset>
         <Header />
-        {children}
+        <div className="section-wrapper">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );

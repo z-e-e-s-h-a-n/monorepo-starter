@@ -1,4 +1,5 @@
 import apiClient, { executeApi } from "../lib/api-client";
+import type { HealthCheckResponse } from "@workspace/contracts";
 
 export const welcome = () => executeApi(() => apiClient.get("/"));
 

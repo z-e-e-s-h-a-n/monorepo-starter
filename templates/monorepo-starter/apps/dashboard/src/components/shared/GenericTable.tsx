@@ -29,6 +29,7 @@ import SearchToolbar from "@/components/shared/SearchToolbar";
 import TableSkeleton from "@/components/skeleton/TableSkeleton";
 import type { PaginationProps } from "@/components/shared/Pagination";
 import type { SearchToolbarProps } from "@/components/shared/SearchToolbar";
+import type { BaseQueryType, BaseResponse } from "@workspace/contracts";
 
 export interface ColumnConfig<TData, TQuery extends BaseQueryType = never> {
   header: string;
@@ -48,6 +49,7 @@ interface GenericTableProps<
   columns: ColumnConfig<TData, TQuery>[];
   onDelete?: (row: TData) => Promise<void> | void;
   canEdit?: boolean;
+  canAdd?: boolean;
 }
 
 function GenericTable<
@@ -73,6 +75,7 @@ function GenericTable<
   setPage,
   setLimit,
   canEdit = true,
+  canAdd = true,
   onDelete,
   filter,
   setFilter,
@@ -113,6 +116,7 @@ function GenericTable<
     <section className="space-y-4">
       {/* FILTER BAR */}
       <SearchToolbar
+        canAdd={canAdd}
         entityType={entityType}
         search={search}
         setSearch={setSearch}

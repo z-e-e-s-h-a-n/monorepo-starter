@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { LoaderCircle } from "lucide-react";
 import { requestOtp, validateOtp } from "@workspace/sdk/auth";
 import { useRouter } from "next/navigation";
+import type { RequestOtpType } from "@workspace/contracts/auth";
 
 export interface OtpMeta {
   token?: string;

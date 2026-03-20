@@ -6,12 +6,24 @@ import {
 } from "@nestjs/common";
 import argon2 from "argon2";
 import type { Request, Response } from "express";
-import type { UserStatus } from "@generated/prisma";
+import type { UserStatus } from "@workspace/db/client";
+
+import type {
+  UpdateIdentifierDto,
+  RequestOtpDto,
+  ResetPasswordDto,
+  SignInDto,
+  SignUpDto,
+  ValidateOtpDto,
+  UpdateMfaDto,
+} from "@workspace/contracts/auth";
 
 import { OtpService } from "./otp.service";
 import { PrismaService } from "@/modules/prisma/prisma.service";
 import { TokenService } from "@/modules/token/token.service";
 import { NotificationService } from "@/modules/notification/notification.service";
+import type { SafeUser } from "@workspace/contracts/user";
+import type { IdentifierType, UserRole } from "@workspace/contracts";
 
 @Injectable()
 export class AuthService {

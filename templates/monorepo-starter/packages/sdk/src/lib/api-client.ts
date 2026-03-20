@@ -43,8 +43,6 @@ export const executeApi = async <T = null>(
 
     return payload;
   } catch (err: unknown) {
-    console.log("err", err);
-
     if (err instanceof ApiException) {
       throw err;
     }

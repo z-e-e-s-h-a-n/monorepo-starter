@@ -3,6 +3,7 @@ import { ActionBlock } from "./components/actionBlock";
 import { Greeting } from "./components/greeting";
 import { Header } from "./components/header";
 import { Layout } from "./components/layout";
+import type { EmailTemplateComponent } from "../types/global";
 
 export const VerifyIdentifier: EmailTemplateComponent<"verifyIdentifier"> = ({
   user,

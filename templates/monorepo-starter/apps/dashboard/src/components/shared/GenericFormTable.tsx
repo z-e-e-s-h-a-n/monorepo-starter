@@ -21,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
+import type { BaseResponse } from "@workspace/contracts";
 
 export interface ColumnConfig<TData> {
   header: string;

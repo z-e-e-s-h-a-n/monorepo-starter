@@ -28,6 +28,8 @@ import { MfaMethodEnum } from "@workspace/contracts";
 import { Badge } from "@workspace/ui/components/badge";
 import useUser from "@/hooks/user";
 import UserSessions from "./UserSessions";
+import type { UserResponse } from "@workspace/contracts/user";
+import type { OtpPurpose } from "@workspace/db";
 
 type IdentifierType = "email" | "phone";
 

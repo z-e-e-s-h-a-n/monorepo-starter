@@ -4,8 +4,7 @@ import type { Request, Response } from "express";
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { futureDate } from "@workspace/shared/utils";
-import { Prisma, UserRole } from "@generated/prisma";
-import type { SessionUncheckedCreateInput } from "prisma/generated/models";
+import { UserRole, UserStatus, type Prisma } from "@workspace/db/client";
 
 import { CookieService } from "@/utils/cookie.util";
 import { ClientService } from "@/utils/client.utils";
@@ -73,7 +72,7 @@ export class TokenService {
 
     const refreshTokenHash = await argon2.hash(refreshToken);
 
-    const tokenData: SessionUncheckedCreateInput = {
+    const tokenData: Prisma.SessionUncheckedCreateInput = {
       ...ctx,
       deviceId,
       id: payload.sid,
@@ -258,3 +257,4 @@ export class TokenService {
     return { message: "All Session Revoked Successfully." };
   }
 }
+

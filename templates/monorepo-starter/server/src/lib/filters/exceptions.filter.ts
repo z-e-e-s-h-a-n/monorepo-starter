@@ -8,7 +8,13 @@ import {
   type ExceptionFilter,
   type ArgumentsHost,
 } from "@nestjs/common";
-import { Prisma } from "@generated/prisma";
+import {
+  PrismaClientKnownRequestError,
+  PrismaClientValidationError,
+  PrismaClientUnknownRequestError,
+  PrismaClientInitializationError,
+  PrismaClientRustPanicError,
+} from "@prisma/client/runtime/client";
 
 import { InjectLogger } from "@/decorators/logger.decorator";
 import { LoggerService } from "@/modules/logger/logger.service";
@@ -54,7 +60,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     // -------- Prisma ClientKnownRequestError --------
-    else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+    else if (exception instanceof PrismaClientKnownRequestError) {
       switch (exception.code) {
         case "P2002": {
           status = 409;
@@ -106,7 +112,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     // -------- Prisma Validation Error --------
-    else if (exception instanceof Prisma.PrismaClientValidationError) {
+    else if (exception instanceof PrismaClientValidationError) {
       status = 400;
       const errorMessage = exception.message;
 
@@ -125,7 +131,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     // -------- Prisma Unknown Request Error --------
-    else if (exception instanceof Prisma.PrismaClientUnknownRequestError) {
+    else if (exception instanceof PrismaClientUnknownRequestError) {
       status = 400;
       message = "Database request error";
 
@@ -135,7 +141,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     // -------- Prisma Initialization Error --------
-    else if (exception instanceof Prisma.PrismaClientInitializationError) {
+    else if (exception instanceof PrismaClientInitializationError) {
       status = 500;
       message = "Database connection failed";
 
@@ -145,7 +151,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     // -------- Prisma Rust Panic Error --------
-    else if (exception instanceof Prisma.PrismaClientRustPanicError) {
+    else if (exception instanceof PrismaClientRustPanicError) {
       status = 500;
       message = "Database engine error";
 
@@ -172,8 +178,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message: issue.message,
         errorCode: issue.code,
       }));
-
-      console.log("meta", meta);
 
       message = "Validation failed";
     }

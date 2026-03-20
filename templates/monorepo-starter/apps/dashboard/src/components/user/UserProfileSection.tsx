@@ -7,7 +7,11 @@ import { useForm } from "@tanstack/react-form";
 import { Loader2, User, Camera, Bell } from "lucide-react";
 import type { UseMutateAsyncFunction } from "@tanstack/react-query";
 
-import { userProfileSchema } from "@workspace/contracts/user";
+import {
+  userProfileSchema,
+  type UserProfileType,
+  type UserResponse,
+} from "@workspace/contracts/user";
 import { MessagingChannelEnum, ThemeModeEnum } from "@workspace/contracts";
 
 import {

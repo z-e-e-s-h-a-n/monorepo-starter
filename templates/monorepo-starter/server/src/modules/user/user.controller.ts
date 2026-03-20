@@ -1,4 +1,3 @@
-import { type Request } from "express";
 import { Body, Controller, Get, Put } from "@nestjs/common";
 import { UserProfileDto } from "@workspace/contracts/user";
 
@@ -15,7 +14,10 @@ export class UserController {
   }
 
   @Put()
-  async updateUserProfile(@Body() dto: UserProfileDto, req: Request) {
-    return this.userService.updateUserProfile(dto, req);
+  async updateUserProfile(
+    @Body() dto: UserProfileDto,
+    @User("id") userId: string,
+  ) {
+    return this.userService.updateUserProfile(dto, userId);
   }
 }

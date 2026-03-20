@@ -2,6 +2,7 @@ import { Text } from "@react-email/components";
 import { Greeting } from "./components/greeting";
 import { Header } from "./components/header";
 import { Layout } from "./components/layout";
+import type { EmailTemplateComponent } from "../types/global";
 
 export const SignIn: EmailTemplateComponent<"signIn"> = ({ user }) => (
   <Layout previewText="New sign-in detected">

@@ -1,5 +1,6 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { UserProfileType } from "@workspace/contracts/user";
 import { signOut } from "@workspace/sdk/auth";
 import { getCurrentUser, updateProfile } from "@workspace/sdk/user";
 import { parseDuration } from "@workspace/shared/utils";

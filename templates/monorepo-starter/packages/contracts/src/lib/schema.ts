@@ -1,5 +1,5 @@
 import { z, ZodType } from "zod";
-import { SortOrderEnum, BaseSortByEnum } from "./enums";
+import { SortOrderEnum, BaseSortByEnum } from "../lib/enums";
 
 /* ======================================================
      SHARED UTILS — SCHEMA
@@ -18,7 +18,11 @@ export const identifierSchema = z.union([emailSchema, phoneSchema], {
   }),
 });
 
-export const nameSchema = z.string().min(3);
+export const nameSchema = z
+  .string()
+  .trim()
+  .min(3, "Please enter at least 3 characters")
+  .refine((val) => val.length > 0, "Name cannot be blank");
 export const passwordSchema = z.string().min(8);
 export const numberSchema = z.coerce.number<number>().int().min(1);
 
@@ -46,7 +50,7 @@ export const baseQuerySchema = <
   sortByEnum: TSortBy,
   searchByEnum: TSearchBy,
 ) => {
-  const sortByWithCreatedAt = z.literal(BaseSortByEnum.options).or(sortByEnum);
+  const sortByWithCreatedAt = BaseSortByEnum.or(sortByEnum);
 
   return z.object({
     page: numberSchema.default(1),

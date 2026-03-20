@@ -3,6 +3,10 @@ import { Greeting } from "./components/greeting";
 import { Header } from "./components/header";
 import { Layout } from "./components/layout";
 import { NumericCode } from "./components/numericCode";
+import type {
+  EmailTemplateComponent,
+  EmailTemplateProps,
+} from "../types/global";
 
 const isDisableFlow = (props: EmailTemplateProps<"updateMfa">) => {
   if (props.action) return props.action === "disable";

@@ -1,6 +1,6 @@
 import { defineConfig } from "tsup";
 
-export default defineConfig({
+export default defineConfig((options) => ({
   entry: ["src/main.ts"],
   outDir: "dist",
   target: "es2024",
@@ -10,10 +10,11 @@ export default defineConfig({
   clean: true,
   dts: false,
   minify: false,
-  onSuccess: "node dist/main.js",
+  onSuccess: options.watch ? "node dist/main.js" : undefined,
   external: [
     "@workspace/shared",
     "@workspace/contracts",
     "@workspace/templates",
+    "@workspace/db",
   ],
-});
+}));

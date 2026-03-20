@@ -1,5 +1,5 @@
-import { type Request } from "express";
 import { Injectable } from "@nestjs/common";
+import type { UserProfileDto } from "@workspace/contracts/user";
 
 import { AuthService } from "@/modules/auth/auth.service";
 import { PrismaService } from "@/modules/prisma/prisma.service";
@@ -23,9 +23,7 @@ export class UserService {
     };
   }
 
-  async updateUserProfile(dto: UserProfileDto, req: Request) {
-    const userId = req.user!.id;
-
+  async updateUserProfile(dto: UserProfileDto, userId: string) {
     await this.prisma.user.update({
       where: { id: userId },
       data: dto,

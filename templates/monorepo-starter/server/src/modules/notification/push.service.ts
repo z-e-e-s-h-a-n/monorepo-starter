@@ -5,6 +5,7 @@ import { InjectLogger } from "@/decorators/logger.decorator";
 import { EnvService } from "@/modules/env/env.service";
 import { LoggerService } from "@/modules/logger/logger.service";
 import { PrismaService } from "@/modules/prisma/prisma.service";
+import type { SafeUser } from "@workspace/contracts/user";
 
 @Injectable()
 export class PushService {

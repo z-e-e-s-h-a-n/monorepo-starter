@@ -26,8 +26,11 @@ import {
   nameSchema,
   passwordSchema,
   identifierSchema,
+  type AuthFormType,
 } from "@workspace/contracts";
 import Image from "next/image";
+import type { SignUpType, ValidateOtpType } from "@workspace/contracts/auth";
+import type { OtpPurpose } from "@workspace/db";
 
 interface AuthFormProps {
   formType: AuthFormType;

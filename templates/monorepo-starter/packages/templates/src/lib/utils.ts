@@ -1,6 +1,8 @@
 import React from "react";
 import { pretty, render } from "@react-email/render";
 import { emailTemplateMap } from "./constants";
+import type { NotificationPurpose } from "@workspace/contracts";
+import type { EmailTemplateProps, EmailTemplateResult } from "../types/global";
 
 export const resolveEmailTemplate = async <T extends NotificationPurpose>(
   props: EmailTemplateProps<T>,

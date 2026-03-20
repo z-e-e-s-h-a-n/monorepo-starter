@@ -6,10 +6,15 @@ import Image from "next/image";
 import { X, Upload } from "lucide-react";
 import { type Accept, useDropzone } from "react-dropzone";
 
-import { MediaTypeEnum } from "@workspace/contracts";
+import {
+  MediaTypeEnum,
+  type MediaType,
+  type MediaVisibility,
+} from "@workspace/contracts";
 import { cn } from "@workspace/ui/lib/utils";
 import { Input } from "@workspace/ui/components/input";
 import { Button } from "@workspace/ui/components/button";
+import { Textarea } from "@workspace/ui/components/textarea";
 import {
   Select,
   SelectContent,
@@ -36,6 +41,9 @@ function MediaUploader() {
   const { createAsync, isCreating } = useCreateMedia();
   const [files, setFiles] = useState<File[]>([]);
   const [type, setType] = useState<MediaType>("other");
+  const [title, setTitle] = useState("");
+  const [altText, setAltText] = useState("");
+  const [notes, setNotes] = useState("");
 
   const visibility: MediaVisibility = PUBLIC_TYPES.includes(type)
     ? "public"
@@ -52,16 +60,17 @@ function MediaUploader() {
         formData.append("file", file);
         formData.append("type", type);
         formData.append("visibility", visibility);
-
-        // TODO Implement These
-        // formData.append("title",title );
-        // formData.append("altText",altText );
-        // formData.append("notes",notes );
+        if (title.trim()) formData.append("title", title.trim());
+        if (altText.trim()) formData.append("altText", altText.trim());
+        if (notes.trim()) formData.append("notes", notes.trim());
 
         await createAsync(formData);
 
         toast.success(`${file.name} uploaded`);
         setFiles([]);
+        setTitle("");
+        setAltText("");
+        setNotes("");
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         if (err?.status === 409) {
@@ -116,6 +125,48 @@ function MediaUploader() {
       {/* FILE LIST */}
       {files.length > 0 && (
         <div className="space-y-4">
+          <div className="grid gap-4 rounded-lg border p-4 md:grid-cols-2">
+            <div className="space-y-2 md:col-span-2">
+              <p className="text-sm font-medium">Media Details</p>
+              <p className="text-xs text-muted-foreground">
+                Add optional metadata now to keep the media library organized.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="media-title">
+                Title
+              </label>
+              <Input
+                id="media-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Hero banner, office logo, team photo..."
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium" htmlFor="media-alt-text">
+                Alt Text
+              </label>
+              <Input
+                id="media-alt-text"
+                value={altText}
+                onChange={(e) => setAltText(e.target.value)}
+                placeholder="Short accessible description"
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-sm font-medium" htmlFor="media-notes">
+                Notes
+              </label>
+              <Textarea
+                id="media-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Optional internal notes for this media asset"
+              />
+            </div>
+          </div>
+
           {files.map((file) => (
             <div
               key={file.name}

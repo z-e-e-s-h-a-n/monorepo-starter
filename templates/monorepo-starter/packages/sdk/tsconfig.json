@@ -3,10 +3,11 @@
   "compilerOptions": {
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "baseUrl": ".",
+    "rootDir": ".",
     "paths": {
       "@workspace/sdk/*": ["src/*"]
     }
   },
-  "include": [".", "../contracts/src/**/*types.d.ts"],
+  "include": ["."],
   "exclude": ["node_modules", "dist"]
 }

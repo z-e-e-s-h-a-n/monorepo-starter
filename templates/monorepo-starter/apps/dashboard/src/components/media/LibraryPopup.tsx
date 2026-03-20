@@ -3,6 +3,7 @@ import {
   DialogTitle,
   DialogContent,
 } from "@workspace/ui/components/dialog";
+import type { MediaResponse } from "@workspace/contracts/media";
 import MediaLibrary from ".";
 
 interface LibraryPopupProps {

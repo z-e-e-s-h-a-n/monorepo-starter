@@ -2,6 +2,10 @@ import { Text } from "@react-email/components";
 import { Greeting } from "./components/greeting";
 import { Header } from "./components/header";
 import { Layout } from "./components/layout";
+import type {
+  EmailTemplateComponent,
+  EmailTemplateProps,
+} from "../types/global";
 
 const isUnsubscribed = (props: EmailTemplateProps<"newsletter">) => {
   return Boolean(props.newsletterSubscriber.isActive);

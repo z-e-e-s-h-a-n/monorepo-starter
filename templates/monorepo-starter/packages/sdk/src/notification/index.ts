@@ -1,4 +1,8 @@
 import apiClient, { executeApi } from "../lib/api-client";
+import type {
+  NotificationResponse,
+  RegisterPushTokenType,
+} from "@workspace/contracts/notification";
 
 export const getAllNotification = () =>
   executeApi<NotificationResponse[]>(() => apiClient.get("/notifications"));

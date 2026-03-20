@@ -2,11 +2,12 @@
   "extends": "@workspace/config/typescript/node",
   "compilerOptions": {
     "outDir": "dist",
+    "rootDir": ".",
     "baseUrl": ".",
     "paths": {
       "@workspace/shared/*": ["src/*"]
     }
   },
-  "include": [".", "../contracts/src/**/*types.d.ts"],
+  "include": ["."],
   "exclude": ["node_modules", "dist"]
 }

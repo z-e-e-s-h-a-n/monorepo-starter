@@ -1,67 +1,87 @@
-# Monorepo Starter Template
+# Monorepo Starter
 
-This is a minimal, modern monorepo template based on shadcn/ui, customized for fast development and scalability.
+A production-oriented monorepo starter with:
 
-## Features
+- `apps/web` for the public Next.js app
+- `apps/dashboard` for the internal/admin Next.js app
+- `server` for the NestJS API
+- `packages/contracts`, `packages/sdk`, `packages/ui`, `packages/templates`, and `packages/shared`
+- `packages/db` for Prisma schema, migrations, seed data, and generated client exports
 
-- Modular structure for web, server, and shared packages
-- Customizable UI components (`packages/ui`)
-- Tailwind CSS and PostCSS preconfigured
-- TypeScript everywhere
-- Ready for Next.js and NestJS
-- ESLint, TurboRepo, and PNPM workspace setup
+## Prerequisites
 
-## Structure
+- Node.js `24+`
+- `pnpm` `10+`
+- PostgreSQL
 
-- `apps/web` – Next.js frontend
-- `server` – NestJS backend
-- `packages/ui` – Shared UI components
-- `packages/config` – Shared configs (ESLint, TypeScript)
+Optional integrations:
 
-## Getting Started
+- Cloudinary
+- SMTP
+- Google OAuth
+- Facebook OAuth
+- Firebase push notifications
+
+## Local Setup
+
+1. Install dependencies.
 
 ```bash
 pnpm install
-pnpm dev # Start all apps
 ```
 
-## Database Setup
+2. Copy `server/.env.example` to `server/.env` and fill in the values you need.
 
-1. Edit the `.env` file in the `server` directory:
+3. Create `apps/web/.env.local` and `apps/dashboard/.env.local`.
 
 ```env
-DB_URI="postgresql://username:password@localhost:5432/your-db-name"
+NEXT_PUBLIC_API_URL="http://localhost:4000"
 ```
 
-Replace `username`, `password`, and `your-db-name` with your PostgreSQL credentials and the desired database name.
-
-2. Navigate to the server folder:
+4. Generate Prisma client and apply local migrations.
 
 ```bash
-cd server
+pnpm --filter @workspace/db prisma:generate
+pnpm --filter @workspace/db prisma:migrate
+pnpm --filter @workspace/db prisma:seed
 ```
 
-3. Run Prisma commands to set up the database and generate the client:
+5. Start the apps you need.
 
 ```bash
-pnpm prisma:migrate:dev
-pnpm prisma:generate
+pnpm --filter server dev
+pnpm --filter web dev
+pnpm --filter dashboard dev
 ```
 
-> Note: Make sure your PostgreSQL server is running and accessible with the credentials you set.
+Default local endpoints:
 
-## Usage
+- API: `http://localhost:4000`
+- Website: `http://localhost:3000`
+- Dashboard: `http://localhost:3001`
 
-Import UI components in your app:
+## Useful Commands
 
-```tsx
-import { Button } from "@workspace/ui/components/button";
+```bash
+pnpm check-types
+pnpm lint
+pnpm build
+pnpm build:server
+pnpm build:web
+pnpm build:dashboard
+pnpm prune:server
 ```
 
-## Customization
+## Deployment Notes
 
-Feel free to modify, extend, and organize the template to fit your workflow.
+- The template includes a root `Dockerfile` for packaging the NestJS server with `turbo prune`.
+- `packages/db` owns Prisma schema, migrations, seed scripts, and typed exports.
+- `apps/web` and `apps/dashboard` are ready to point at the API through `NEXT_PUBLIC_API_URL`.
 
----
+## Package Highlights
 
-Made with ❤️ using shadcn/ui & Monorepo
+- `@workspace/contracts` keeps DTOs and schemas aligned across server and frontend
+- `@workspace/sdk` centralizes API client calls
+- `@workspace/ui` holds shared design system primitives
+- `@workspace/templates` contains email templates
+- `@workspace/shared` keeps framework-agnostic utilities/constants

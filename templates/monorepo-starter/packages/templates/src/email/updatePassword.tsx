@@ -4,6 +4,10 @@ import { ActionBlock } from "./components/actionBlock";
 import { Greeting } from "./components/greeting";
 import { Header } from "./components/header";
 import { Layout } from "./components/layout";
+import type {
+  EmailTemplateComponent,
+  EmailTemplateProps,
+} from "../types/global";
 
 const isSetPassword = (props: EmailTemplateProps<"updatePassword">) => {
   if (props.action) return props.action === "set";

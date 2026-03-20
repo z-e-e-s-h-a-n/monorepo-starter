@@ -5,10 +5,13 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const SCHEMA_PATH = path.resolve(__dirname, "../prisma/schema.prisma");
+const SCHEMA_PATH = path.resolve(
+  __dirname,
+  "../../packages/db/prisma/schema.prisma",
+);
 const OUTPUT_PATH = path.resolve(
   __dirname,
-  "../src/modules/prisma/soft-delete.models.ts"
+  "../src/modules/prisma/soft-delete.models.ts",
 );
 
 const schema = fs.readFileSync(SCHEMA_PATH, "utf8");
@@ -47,6 +50,6 @@ ${softDeleteModels.map((m) => `  "${m}"`).join(",\n")}
 fs.writeFileSync(OUTPUT_PATH, output, "utf8");
 
 console.log(
-  `✅ Generated soft delete models (${softDeleteModels.length}/${totalModels} models):`
+  `✅ Generated soft delete models (${softDeleteModels.length}/${totalModels} models):`,
 );
 console.log(softDeleteModels.join("  -  "));

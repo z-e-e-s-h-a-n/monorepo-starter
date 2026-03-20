@@ -1,3 +1,5 @@
+import type { AuthActions } from "@workspace/contracts";
+
 export interface BaseApiResponse {
   status: number;
   message: string;

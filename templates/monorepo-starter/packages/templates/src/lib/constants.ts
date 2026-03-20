@@ -1,4 +1,6 @@
 import * as emailTemplates from "@workspace/templates/email";
+import type { NotificationPurpose } from "@workspace/contracts";
+import type { EmailTemplateComponent } from "../types/global";
 
 export const emailTemplateMap: Record<
   NotificationPurpose,

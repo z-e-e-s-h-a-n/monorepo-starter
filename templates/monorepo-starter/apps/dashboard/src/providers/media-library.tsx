@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useRef, useState } from "react";
+import type { MediaResponse } from "@workspace/contracts/media";
 import LibraryPopup from "@/components/media/LibraryPopup";
 
 type MediaLibraryContextType = {

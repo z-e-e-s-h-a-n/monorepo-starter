@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import cookieParser from "cookie-parser";
 import { WinstonModule } from "nest-winston";
@@ -35,7 +36,7 @@ async function bootstrap() {
   app.use(cookieParser());
   app.useGlobalInterceptors(app.get(ResponseInterceptor));
   app.useGlobalFilters(app.get(AllExceptionsFilter));
-  await app.listen(port);
+  await app.listen(port, "0.0.0.0");
 
   logger.log("==========================================");
   logger.log(`🚀 Server started successfully!`);

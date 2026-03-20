@@ -1,3 +1,8 @@
+import type {
+  NotificationPriority,
+  NotificationPurpose,
+} from "@workspace/contracts";
+
 /**
  * IMPORTANT = user must see this even if it costs money (SMS / WhatsApp)
  * Do NOT mark notifications important unless missing it causes

@@ -1,4 +1,4 @@
 export const appName = {
   short: "ZHX",
-  default: "ZHX Solutions",
+  default: "ZHX Monorepo",
 };

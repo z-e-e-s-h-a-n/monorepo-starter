@@ -1,4 +1,4 @@
-import { Prisma } from "@generated/prisma";
+import { Prisma } from "@workspace/db/client";
 import { SoftDeleteModels } from "./soft-delete.models";
 
 export type SoftDeleteExtraArgs = {
@@ -72,12 +72,27 @@ export const softDeleteExtension = Prisma.defineExtension((client) =>
         }) {
           const hasDel = SoftDeleteModels.has(model);
           const readOps = [
-            "findUnique",
             "findFirst",
             "findMany",
             "count",
             "aggregate",
           ] as const;
+
+          if (
+            hasDel &&
+            (operation === "findUnique" || operation === "findUniqueOrThrow")
+          ) {
+            const next: any = { ...args };
+            next.where ??= {};
+
+            if (next.where.deletedAt === undefined) {
+              next.where.deletedAt = null;
+            }
+
+            return operation === "findUniqueOrThrow"
+              ? (client as any)[model].findFirstOrThrow(next)
+              : (client as any)[model].findFirst(next);
+          }
 
           if (!hasDel || !readOps.includes(operation as any)) {
             return query(args as A);

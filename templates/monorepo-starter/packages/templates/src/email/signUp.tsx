@@ -3,6 +3,7 @@ import { appName } from "@workspace/shared/constants";
 import { Greeting } from "./components/greeting";
 import { Header } from "./components/header";
 import { Layout } from "./components/layout";
+import type { EmailTemplateComponent } from "../types/global";
 
 export const SignUp: EmailTemplateComponent<"signUp"> = ({ user }) => (
   <Layout previewText={`Welcome to ${appName.default}`}>

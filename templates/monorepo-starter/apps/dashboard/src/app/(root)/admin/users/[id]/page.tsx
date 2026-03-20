@@ -10,6 +10,8 @@ import {
   type SectionConfig,
   GenericDetailsPage,
 } from "@/components/shared/GenericDetailsPage";
+import type { UserResponse } from "@workspace/contracts/user";
+import type { AppPageProps } from "@workspace/contracts";
 
 const sections: SectionConfig<UserResponse>[] = [
   {

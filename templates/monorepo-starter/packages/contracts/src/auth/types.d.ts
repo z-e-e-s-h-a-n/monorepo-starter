@@ -1,73 +1,39 @@
 import type z from "zod";
 import * as schema from "./schema";
-import type { Session } from "../lib/prisma";
+import type { Session } from "@workspace/db/browser";
 
-declare global {
-  /* ======================================================
-     AUTH — INPUT TYPES
-  ===================================================== */
+export type SignInType = z.input<typeof schema.signInSchema>;
+export type SignUpType = z.input<typeof schema.signUpSchema>;
+export type RequestOtpType = z.input<typeof schema.requestOtpSchema>;
+export type ValidateOtpType = z.input<typeof schema.validateOtpSchema>;
+export type ResetPasswordType = z.input<typeof schema.resetPasswordSchema>;
+export type UpdateMfaType = z.input<typeof schema.updateMfaSchema>;
+export type UpdateIdentifierType = z.input<
+  typeof schema.updateIdentifierSchema
+>;
 
-  type SignInType = z.input<typeof schema.signInSchema>;
-
-  type SignUpType = z.input<typeof schema.signUpSchema>;
-
-  type RequestOtpType = z.input<typeof schema.requestOtpSchema>;
-
-  type ValidateOtpType = z.input<typeof schema.validateOtpSchema>;
-
-  type ResetPasswordType = z.input<typeof schema.resetPasswordSchema>;
-
-  type UpdateMfaType = z.input<typeof schema.updateMfaSchema>;
-
-  type UpdateIdentifierType = z.input<typeof schema.updateIdentifierSchema>;
-
-  /* ======================================================
-     AUTH — OUTPUT TYPES
-  ===================================================== */
-
-  type SignInDto = z.output<typeof schema.signInSchema>;
-
-  type SignUpDto = z.output<typeof schema.signUpSchema>;
-
-  type RequestOtpDto = z.output<typeof schema.requestOtpSchema>;
-
-  type ValidateOtpDto = z.output<typeof schema.validateOtpSchema>;
-
-  type ResetPasswordDto = z.output<typeof schema.resetPasswordSchema>;
-
-  type UpdateMfaDto = z.output<typeof schema.updateMfaSchema>;
-
-  type UpdateIdentifierDto = z.output<typeof schema.updateIdentifierSchema>;
-
-  /* ======================================================
-     AUTH — RESPONSES
-  ===================================================== */
-
-  interface SignInResponse {
-    id: string;
-    role: UserRole;
-  }
-
-  interface ValidateOtpResponse {
-    secret?: string;
-  }
-
-  type SessionResponse = Pick<
-    Session,
-    | "id"
-    | "ip"
-    | "isp"
-    | "location"
-    | "timezone"
-    | "deviceType"
-    | "deviceInfo"
-    | "status"
-    | "isTrusted"
-    | "lastSeenAt"
-    | "createdAt"
-    | "expiresAt"
-    | "revokedAt"
-  >;
+export interface SignInResponse {
+  id: string;
+  role: UserRole;
 }
 
-export {};
+export interface ValidateOtpResponse {
+  secret?: string;
+}
+
+export type SessionResponse = Pick<
+  Session,
+  | "id"
+  | "ip"
+  | "isp"
+  | "location"
+  | "timezone"
+  | "deviceType"
+  | "deviceInfo"
+  | "status"
+  | "isTrusted"
+  | "lastSeenAt"
+  | "createdAt"
+  | "expiresAt"
+  | "revokedAt"
+>;

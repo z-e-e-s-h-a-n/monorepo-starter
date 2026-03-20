@@ -2,10 +2,11 @@
   "extends": "@workspace/config/typescript/react",
   "compilerOptions": {
     "baseUrl": ".",
+    "rootDir": ".",
     "paths": {
       "@workspace/ui/*": ["src/*"]
     }
   },
-  "include": [".", "../contracts/src/**/*types.d.ts"],
+  "include": ["."],
   "exclude": ["node_modules", "dist"]
 }

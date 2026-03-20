@@ -1,4 +1,10 @@
 import { apiClient, executeApi } from "../lib";
+import type {
+  CUUserType,
+  UserQueryResponse,
+  UserQueryType,
+} from "@workspace/contracts/admin";
+import type { UserResponse } from "@workspace/contracts/user";
 
 export const createUser = (data: CUUserType) => {
   return executeApi<UserResponse>(() => apiClient.post("/admin/users", data));

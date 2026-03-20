@@ -3,6 +3,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "outDir": "dist",
+    "rootDir": ".",
     "paths": {
       "@/*": ["src/*"],
       "@/decorators/*": ["src/lib/decorators/*"],
@@ -15,14 +16,9 @@
       "@/schemas/*": ["src/lib/schemas/*"],
       "@/templates/*": ["src/lib/templates/*"],
       "@/utils/*": ["src/lib/utils/*"],
-      "@/constants/*": ["src/lib/constants/*"],
-      "@generated/prisma": ["./prisma/generated/client"]
+      "@/constants/*": ["src/lib/constants/*"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "../packages/templates/src/types/global.d.ts",
-    "../packages/contracts/src/**/*types.d.ts"
-  ],
+  "include": ["**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

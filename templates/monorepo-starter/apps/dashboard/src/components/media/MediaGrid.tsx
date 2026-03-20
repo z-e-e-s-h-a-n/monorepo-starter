@@ -1,5 +1,6 @@
 "use client";
 import { IconCloud } from "@tabler/icons-react";
+import type { MediaResponse } from "@workspace/contracts/media";
 import { MediaCard } from "./MediaCard";
 import {
   Empty,

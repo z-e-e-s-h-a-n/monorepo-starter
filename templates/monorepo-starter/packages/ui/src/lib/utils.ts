@@ -11,7 +11,10 @@ export const copyToClipboard = async (text: string, label: string) => {
   toast.success(`${label} copied to clipboard`);
 };
 
-export const handleDownload = async (media: MediaResponse) => {
+export const handleDownload = async (media: {
+  url: string;
+  filename: string;
+}) => {
   try {
     const response = await fetch(media.url);
     const blob = await response.blob();

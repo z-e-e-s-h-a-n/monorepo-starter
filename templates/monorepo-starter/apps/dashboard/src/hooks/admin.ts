@@ -2,6 +2,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { CUUserType, UserQueryType } from "@workspace/contracts/admin";
 import type { ApiException } from "@workspace/sdk";
 import * as user from "@workspace/sdk/admin";
 import { parseDuration } from "@workspace/shared/utils";
@@ -84,7 +85,7 @@ export function useAdminMutations() {
   });
 
   const restoreMutation = useMutation({
-    mutationFn: (id: string) => user.restoreUser(id),
+    mutationFn: user.restoreUser,
     onSuccess: invalidateUsers,
   });
 

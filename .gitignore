@@ -8,11 +8,8 @@ node_modules
 
 # Local env files
 
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*
+!.env.example
 
 # Testing
 
@@ -32,6 +29,10 @@ coverage
 out
 build
 dist
+
+# Generated app artifacts
+**/next-env.d.ts
+apps/web/public/sitemap*.xml
 
 # Debug
 

@@ -1,4 +1,17 @@
 import { API_URL, apiClient, executeApi } from "../lib";
+import type { OAuthProvider } from "@workspace/contracts";
+import type {
+  RequestOtpType,
+  SessionResponse,
+  SignInResponse,
+  SignInType,
+  SignUpType,
+  UpdateIdentifierType,
+  UpdateMfaType,
+  ValidateOtpResponse,
+  ValidateOtpType,
+  ResetPasswordType,
+} from "@workspace/contracts/auth";
 
 /* =========================
    AUTH

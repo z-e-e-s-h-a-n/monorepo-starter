@@ -7,7 +7,7 @@ import {
   type CanActivate,
   type ExecutionContext,
 } from "@nestjs/common";
-import type { UserRole } from "@generated/prisma";
+import type { UserRole } from "@workspace/db/client";
 
 import { ROLES_KEY } from "@/decorators/roles.decorator";
 import { InjectLogger } from "@/decorators/logger.decorator";

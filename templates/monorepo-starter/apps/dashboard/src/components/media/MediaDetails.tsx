@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { FileIcon } from "lucide-react";
+import type { MediaResponse } from "@workspace/contracts/media";
 import { formatDate } from "@workspace/shared/utils";
 
 interface MediaDetailsProps {

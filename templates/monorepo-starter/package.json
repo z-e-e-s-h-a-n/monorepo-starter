@@ -4,14 +4,21 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "turbo build",
-    "build:packages": "turbo run build --filter=@workspace/*",
     "dev": "turbo dev",
+    "build": "turbo build",
+    "format": "turbo format",
     "lint": "turbo lint",
     "lint:fix": "turbo lint:fix",
+    "update:deps": "pnpm update -r",
     "check-types": "turbo check-types",
-    "format": "turbo format",
-    "update:deps": "pnpm update -r"
+    "build:web": "turbo build --filter=web",
+    "start:web": "cd apps/web && pnpm start",
+    "build:dashboard": "turbo build --filter=dashboard",
+    "start:dashboard": "cd apps/dashboard && pnpm start",
+    "build:server": "turbo build --filter=server",
+    "start:server": "cd server && pnpm start",
+    "build:packages": "turbo build --filter=@workspace/*",
+    "prune:server": "turbo prune server --docker"
   },
   "devDependencies": {
     "@workspace/config": "workspace:*",

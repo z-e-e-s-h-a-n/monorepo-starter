@@ -3,6 +3,7 @@ import { Greeting } from "./components/greeting";
 import { Header } from "./components/header";
 import { Layout } from "./components/layout";
 import { NumericCode } from "./components/numericCode";
+import type { EmailTemplateComponent } from "../types/global";
 
 export const VerifyMfa: EmailTemplateComponent<"verifyMfa"> = ({
   user,

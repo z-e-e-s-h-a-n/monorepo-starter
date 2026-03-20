@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { $Enums } from "./prisma";
+import * as $Enums from "@workspace/db/enums";
 
 /* =========================
    SHARED - ENUMS
@@ -7,11 +7,11 @@ import { $Enums } from "./prisma";
 
 export const SortOrderEnum = z.enum(["asc", "desc"]);
 export const ChartRangeEnum = z.enum(["7d", "30d", "90d"]);
-
-export const OtpPurposeEnum = z.enum($Enums.OtpPurpose);
-export const OtpTypeEnum = z.enum($Enums.OtpType);
-
 export const ThemeModeEnum = z.enum($Enums.ThemeMode);
+
+export const OtpTypeEnum = z.enum($Enums.OtpType);
+export const OtpPurposeEnum = z.enum($Enums.OtpPurpose);
+
 export const MfaMethodEnum = z.enum($Enums.MfaMethod);
 export const SessionStatusEnum = z.enum($Enums.SessionStatus);
 
@@ -57,26 +57,7 @@ export const MediaSearchByEnum = z.enum(["id", "title"]);
 export const MediaSortByEnum = z.enum(["size", "title", "type"]);
 
 /* =========================
-   CONTACT MESSAGE
-========================= */
-export const ContactMessageSortByEnum = z.enum([
-  "name",
-  "email",
-  "phone",
-  "subject",
-  "repliedAt",
-]);
-
-export const ContactMessageSearchByEnum = z.enum([
-  "name",
-  "email",
-  "phone",
-  "subject",
-  "source",
-]);
-
-/* =========================
-   NEWSLETTER SUBSCRIBER
+   LEADS
 ========================= */
 export const NewsletterSubscriberSortByEnum = z.enum([
   "name",
@@ -85,8 +66,34 @@ export const NewsletterSubscriberSortByEnum = z.enum([
   "unsubscribedAt",
 ]);
 
-export const NewsletterSubscriberSearchByEnum = z.enum([
-  "name",
+export const NewsletterSubscriberSearchByEnum = z.enum(["name", "email"]);
+
+export const ContactMessageSortByEnum = z.enum([
+  "fullName",
   "email",
-  "source",
+  "phone",
+  "repliedAt",
 ]);
+
+export const ContactMessageSearchByEnum = z.enum(["name", "email", "phone"]);
+
+/* =========================
+   SYSTEM
+========================= */
+
+export const AuditActionEnum = z.enum($Enums.AuditAction);
+export const AuditLogSearchByEnum = z.enum([
+  "userId",
+  "entityType",
+  "entityId",
+]);
+export const AuditLogSortByEnum = z.enum(["createdAt", "entityType"]);
+
+export const TrafficSourceSearchByEnum = z.enum([
+  "utmSource",
+  "utmMedium",
+  "utmCampaign",
+  "referrer",
+  "landingPage",
+]);
+export const TrafficSourceSortByEnum = z.enum(["createdAt"]);

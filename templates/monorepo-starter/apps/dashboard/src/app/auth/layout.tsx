@@ -1,3 +1,4 @@
+import type { AppLayoutProps } from "@workspace/contracts";
 import React from "react";
 
 const AuthLayout = ({ children }: AppLayoutProps) => {

@@ -5,6 +5,12 @@ import type { ApiException } from "@workspace/sdk";
 import { useConfirm } from "@workspace/ui/hooks/use-confirm";
 import GenericTable, { type ColumnConfig } from "./GenericTable";
 import type { ListFilterConfig, SearchByOption } from "./SearchToolbar";
+import type {
+  BaseQueryResponse,
+  BaseQueryType,
+  BaseResponse,
+  SortOrderType,
+} from "@workspace/contracts";
 
 interface UseListResult<TKey extends string, TData> {
   data?: BaseQueryResponse & {
@@ -14,14 +20,15 @@ interface UseListResult<TKey extends string, TData> {
   isLoading?: boolean;
   fetchError?: unknown;
 }
-
 interface ListPageConfig<
   TData extends BaseResponse,
   TQuery extends BaseQueryType,
   TKey extends string,
 > {
-  entityKey: TKey;
+  dataKey: TKey;
+  entityType?: string;
   canEdit?: boolean;
+  canAdd?: boolean;
   columns: ColumnConfig<TData, TQuery>[];
   searchByOptions: SearchByOption<TQuery>[];
 
@@ -44,8 +51,10 @@ function ListPage<
   TQuery extends BaseQueryType,
   TKey extends string,
 >({
-  entityKey,
+  dataKey,
+  entityType,
   canEdit,
+  canAdd,
   columns,
   defaultSearchBy,
   defaultSortBy,
@@ -61,7 +70,7 @@ function ListPage<
   const [searchBy, setSearchBy] =
     React.useState<TQuery["searchBy"]>(defaultSearchBy);
   const [sortBy, setSortBy] = React.useState<TQuery["sortBy"]>(defaultSortBy);
-  const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("desc");
+  const [sortOrder, setSortOrder] = React.useState<SortOrderType>("desc");
   const [filter, setFilter] = React.useState<string>();
 
   const query = {
@@ -80,6 +89,8 @@ function ListPage<
   const { data, isLoading } = useListHook(query);
   const deleteHook = useDeleteHook?.();
   const { confirm } = useConfirm();
+  const tableData = data?.[dataKey] ?? [];
+  if (!entityType) entityType = dataKey;
 
   const handleDelete = async (row: TData) => {
     if (!deleteHook) return;
@@ -88,23 +99,21 @@ function ListPage<
     await deleteHook.deleteAsync({ id: row.id, force: false });
   };
 
-  const entityTitle = entityKey.split("/").pop();
-
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold capitalize">
-          {entityTitle} Management
+          {entityType} Management
         </h1>
         <p className="text-muted-foreground">
-          Manage your {entityTitle} here. View, edit, or delete existing
-          records.
+          Manage your {entityType} here. View, edit, or delete existing records.
         </p>
       </div>
       <GenericTable
-        entityType={entityKey}
+        entityType={entityType}
+        canAdd={canAdd}
         canEdit={canEdit}
-        data={data?.[entityKey] || []}
+        data={tableData}
         total={data?.total || 0}
         limit={data?.limit || 10}
         currentPage={data?.page || 1}
