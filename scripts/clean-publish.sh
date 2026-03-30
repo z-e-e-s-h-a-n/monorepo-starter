@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-cd "../"
 
 if [ ! -d "templates" ]; then
   echo "templates directory not found"

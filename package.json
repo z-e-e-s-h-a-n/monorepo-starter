@@ -8,7 +8,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "clean:publish": "\"C:\\Program Files\\Git\\bin\\bash.exe\" scripts/clean-publish.sh",
+    "clean:publish": "bash scripts/clean-publish.sh",
     "prepack": "pnpm run clean:publish"
   },
   "files": [
